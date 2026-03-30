@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://b36e-42-114-249-177.ngrok-free.app/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://b36e-42-114-249-177.ngrok-free.app/health"
+    }
+  ]
+}
