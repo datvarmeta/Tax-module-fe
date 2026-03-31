@@ -49,6 +49,11 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
     ? new Date(invoiceData.completed_at).toLocaleDateString('vi-VN')
     : `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
 
+  const externalId = invoiceData?.external_id || '';
+  const externalIdMatch = externalId.match(/^(.+?\/\d{4})(\d+)$/);
+  const invoiceSerial = externalIdMatch?.[1] || 'TV/2025';
+  const invoiceNo = externalIdMatch?.[2] || '—';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -106,8 +111,8 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
           </div>
           <div className="text-right">
             <span className="inline-block border border-teal-500 text-teal-600 text-[10px] font-bold px-2 py-0.5 rounded mb-1">GTGT / VAT INVOICE</span>
-            <p className="text-xs text-gray-500">Serial: <span className="font-semibold text-gray-900">C26TXS</span></p>
-            <p className="text-xs text-gray-500">No: <span className="font-semibold text-gray-900">00002417</span></p>
+            <p className="text-xs text-gray-500">Serial: <span className="font-semibold text-gray-900">{invoiceSerial}</span></p>
+            <p className="text-xs text-gray-500">No: <span className="font-semibold text-gray-900">{invoiceNo}</span></p>
             <p className="text-xs text-gray-500">Date: <span className="font-semibold text-gray-900">{dateStr}</span></p>
           </div>
         </div>
