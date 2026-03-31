@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
-import { CheckCircle2, Download, Mail, ShoppingCart, FileText } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2, Download, ShoppingCart, FileText, Loader2 } from 'lucide-react';
 import type { CartItem, CustomerType, PersonalForm, BusinessForm } from '../types';
 import { TAX_RATE } from '../types';
 import type { Invoice } from '../services/api';
+import { downloadInvoicePDF } from '../services/api';
 
 interface Props {
   cart: CartItem[];
@@ -19,6 +21,7 @@ interface Props {
 }
 
 export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTax, customerType, personal, business, txHash, invoiceId, invoiceData, onReset }: Props) {
+  const [downloading, setDownloading] = useState(false);
   const hasApiData = !!invoiceData;
 
   const buyerName = hasApiData ? invoiceData.buyer_name : (customerType === 'business' ? business.companyName : personal.fullName);
@@ -55,9 +58,8 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
           <div key={label} className="flex items-center gap-2">
             {i > 0 && <div className="w-8 h-px bg-teal-300" />}
             <div className="flex flex-col items-center gap-1">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                i < 3 ? 'bg-teal-500' : 'bg-teal-100'
-              }`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center ${i < 3 ? 'bg-teal-500' : 'bg-teal-100'
+                }`}>
                 {i < 3 ? (
                   <CheckCircle2 size={14} className="text-white" />
                 ) : (
@@ -185,8 +187,8 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
           </div>
         </div>
 
-        {/* Footer: Viettel Code + Blockchain ref + QR */}
-        <div className="flex items-end justify-between pt-4 border-t border-gray-200">
+        {/* Footer: Viettel Code + Blockchain ref */}
+        {/* <div className="flex items-end justify-between pt-4 border-t border-gray-200">
           <div>
             <p className="text-xs text-gray-400 mb-0.5">Viettel Invoice Code</p>
             <span className="inline-block font-mono font-bold text-teal-600 bg-teal-50 border border-teal-200 px-3 py-1 rounded text-sm">
@@ -195,32 +197,30 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
           </div>
           <div className="text-right">
             <p className="text-xs text-gray-400 mb-1">Blockchain Reference</p>
-            <p className="font-mono text-xs text-gray-500 mb-2">{txHash}</p>
-            {/* QR placeholder */}
-            <div className="w-16 h-16 border-2 border-gray-200 rounded-lg flex items-center justify-center ml-auto">
-              <div className="grid grid-cols-5 gap-px">
-                {Array.from({ length: 25 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`w-2 h-2 ${[0,1,2,3,4,5,9,10,14,15,19,20,21,22,23,24].includes(i) ? 'bg-gray-900' : 'bg-white'}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <p className="text-[9px] text-gray-400 mt-1">Scan to verify</p>
+            <p className="font-mono text-xs text-gray-500">{txHash}</p>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <button className="flex items-center justify-center gap-2 bg-teal-500 text-white py-3.5 rounded-xl font-semibold hover:bg-teal-600 transition cursor-pointer text-sm">
-          <Download size={16} />
-          Download PDF
-        </button>
-        <button className="flex items-center justify-center gap-2 bg-white border-2 border-teal-500 text-teal-600 py-3.5 rounded-xl font-semibold hover:bg-teal-50 transition cursor-pointer text-sm">
-          <Mail size={16} />
-          Send via Email
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <button
+          onClick={async () => {
+            if (!invoiceId) return;
+            setDownloading(true);
+            try {
+              await downloadInvoicePDF(invoiceId);
+            } catch (e) {
+              console.error('Failed to download PDF', e);
+            } finally {
+              setDownloading(false);
+            }
+          }}
+          disabled={!invoiceId || downloading}
+          className="flex items-center justify-center gap-2 bg-teal-500 text-white py-3.5 rounded-xl font-semibold hover:bg-teal-600 transition cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {downloading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+          {downloading ? 'Downloading...' : 'Download PDF'}
         </button>
         <button
           onClick={onReset}
