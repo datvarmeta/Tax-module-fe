@@ -187,25 +187,12 @@ export async function reportToAuthority(body: {
 }
 
 export async function downloadInvoicePDF(invoiceId: string): Promise<void> {
-  const url = `${API_BASE}/invoices/${invoiceId}/pdf`;
-  console.log(`[API] → GET ${url}`);
-
-  const res = await fetch(url);
-  if (!res.ok) {
-    const text = await res.text();
-    console.error(`[API] ← GET ${url} ERROR`, text);
-    throw new Error(`Failed to download PDF (${res.status})`);
-  }
-
-  const blob = await res.blob();
-  const disposition = res.headers.get('Content-Disposition');
-  const filename = disposition?.match(/filename=(.+)/)?.[1] || `invoice_${invoiceId}.pdf`;
+  const { url, filename } = await request<{ url: string; filename: string }>(`/invoices/${invoiceId}/pdf`);
 
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = url;
   a.download = filename;
   a.click();
-  URL.revokeObjectURL(a.href);
 }
 
 export async function checkHealth(): Promise<boolean> {
