@@ -97,7 +97,6 @@ function App() {
               customerType={sim.customerType}
               personal={sim.personalFormRef.current}
               business={sim.businessFormRef.current}
-              txHash={sim.txHash}
               invoiceId={sim.invoiceId}
               invoiceData={sim.invoiceData}
               onReset={sim.handleReset}

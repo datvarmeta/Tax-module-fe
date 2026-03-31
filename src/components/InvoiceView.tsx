@@ -14,13 +14,12 @@ interface Props {
   customerType: CustomerType;
   personal: PersonalForm;
   business: BusinessForm;
-  txHash: string;
   invoiceId: string | null;
   invoiceData: Invoice | null;
   onReset: () => void;
 }
 
-export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTax, customerType, personal, business, txHash, invoiceId, invoiceData, onReset }: Props) {
+export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTax, customerType, personal, business, invoiceId, invoiceData, onReset }: Props) {
   const [downloading, setDownloading] = useState(false);
   const hasApiData = !!invoiceData;
 
@@ -34,11 +33,6 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
   const taxAmount = hasApiData ? invoiceData.total_tax_amount : cartTaxAmount;
   const totalAmount = hasApiData ? invoiceData.total_amount_with_tax : cartTotalWithTax;
   const vatRate = items.length > 0 ? items[0].tax_percentage : TAX_RATE;
-
-  const transactionUuid = invoiceData?.transaction_uuid;
-  const invoiceCode = transactionUuid
-    ? 'VT' + transactionUuid.replace(/-/g, '').slice(0, 8).toUpperCase()
-    : 'VT' + (invoiceId?.replace(/-/g, '').slice(0, 8).toUpperCase() || '95522114');
 
   const now = new Date();
   const dateStr = invoiceData?.completed_at
