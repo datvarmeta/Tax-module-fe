@@ -6,6 +6,16 @@ import { TAX_RATE } from '../types';
 import type { Invoice } from '../services/api';
 import { downloadInvoicePDF } from '../services/api';
 
+const SELLER_INFO = {
+  legalName: 'Công ty Cổ phần Công nghệ Varmeta',
+  taxCode: '0100109106-507',
+  address: 'Tầng 5, Tòa nhà Indochina Riverside, 74 Bạch Đằng, Phường Hải Châu 1, Quận Hải Châu, TP. Đà Nẵng',
+  phone: '0236 3800 999',
+  email: 'invoice@varmeta.io',
+  bankName: 'Ngân hàng TMCP Ngoại Thương Việt Nam (Vietcombank)',
+  bankAccount: '0071004123456',
+};
+
 interface Props {
   cart: CartItem[];
   cartSubtotal: number;
@@ -84,12 +94,14 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
         <div className="flex items-start justify-between mb-6 pb-5 border-b border-gray-200">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center mt-0.5">
-              <span className="text-white font-bold text-xs">TC</span>
+              <span className="text-white font-bold text-xs">VM</span>
             </div>
             <div>
-              <h3 className="font-bold text-gray-900">TechCorp Solutions JSC</h3>
-              <p className="text-xs text-gray-500">Tax Code: 0312345678</p>
-              <p className="text-xs text-gray-500">18 Hoang Dieu 2, Thu Duc City, Ho Chi Minh City</p>
+              <h3 className="font-bold text-gray-900">{SELLER_INFO.legalName}</h3>
+              <p className="text-xs text-gray-500">Tax Code: {SELLER_INFO.taxCode}</p>
+              <p className="text-xs text-gray-500">{SELLER_INFO.address}</p>
+              <p className="text-xs text-gray-500">Phone: {SELLER_INFO.phone} · Email: {SELLER_INFO.email}</p>
+              <p className="text-xs text-gray-500">{SELLER_INFO.bankName} · {SELLER_INFO.bankAccount}</p>
             </div>
           </div>
           <div className="text-right">
