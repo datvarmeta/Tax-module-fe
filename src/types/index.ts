@@ -99,7 +99,7 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: 'title-sponsor',
-    name: 'Title Sponsor',
+    name: 'Sponsor Pack 5',
     category: 'Branding',
     description: 'Top-tier package with event naming rights, priority logo placement, and branded content opportunities.',
     minUSDC: 50000,
@@ -112,7 +112,7 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: 'media-sponsor',
-    name: 'Media Partner Sponsor',
+    name: 'Sponsor Pack 6',
     category: 'Media',
     description: 'Built for media partners with press channels, podcast networks, or creator-led distribution.',
     minUSDC: 60000,
