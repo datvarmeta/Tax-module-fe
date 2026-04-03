@@ -36,6 +36,7 @@ export function CheckoutStep({
   const networkFeeUSDC = NETWORK_FEE / USDC_VND_RATE;
   const totalWithFeeUSDC = cartSubtotalUSDC + cartTaxAmountUSDC + networkFeeUSDC;
   const itemCount = cart.length;
+  const isCompanyAddressRequired = business.taxCode.trim().length > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,13 +223,16 @@ export function CheckoutStep({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Company Address (Optional)</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Company Address {isCompanyAddressRequired ? '*' : '(Optional)'}
+                  </label>
                   <input
                     type="text"
                     value={business.companyAddress}
                     onChange={e => setBusiness(b => ({ ...b, companyAddress: e.target.value }))}
                     placeholder="Street, District, City"
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                    required={isCompanyAddressRequired}
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

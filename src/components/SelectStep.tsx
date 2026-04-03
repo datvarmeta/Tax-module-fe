@@ -113,17 +113,29 @@ export function SelectStep({ cart, onUpsertCartItem, onRemoveFromCart, onProceed
                   : 'hover:shadow-xl hover:shadow-slate-200/80'
               }`}
             >
-              <div className={`h-34 bg-gradient-to-br ${product.gradient} relative p-4`}>
+              <div
+                className={`h-34 relative p-4 overflow-hidden ${product.image ? 'bg-slate-900' : `bg-gradient-to-br ${product.gradient}`}`}
+                style={
+                  product.image
+                    ? {
+                        backgroundImage: `url(${product.image})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }
+                    : undefined
+                }
+              >
+                {product.image && <div className="absolute inset-0 bg-slate-900/30" />}
                 {product.badge && (
-                  <span className={`absolute top-3 left-3 ${product.badgeColor} text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full`}>
+                  <span className={`absolute top-3 left-3 ${product.badgeColor} text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full z-10`}>
                     {product.badge}
                   </span>
                 )}
-                <span className="absolute top-3 right-3 text-[10px] font-medium text-gray-500 bg-white/70 px-2 py-0.5 rounded-full">
+                <span className="absolute top-3 right-3 text-[10px] font-medium text-gray-600 bg-white/85 px-2 py-0.5 rounded-full z-10">
                   {product.category}
                 </span>
                 {isSelected && (
-                  <span className="absolute bottom-3 right-3 bg-teal-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg">
+                  <span className="absolute bottom-3 right-3 bg-teal-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg z-10">
                     {cartItem.selectedUSDC.toLocaleString('en-US')} USDC
                   </span>
                 )}

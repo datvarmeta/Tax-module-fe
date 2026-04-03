@@ -34,6 +34,7 @@ export interface Product {
   badge?: string;
   badgeColor?: string;
   gradient: string;
+  image?: string;
 }
 
 export interface CartItem {
@@ -50,7 +51,7 @@ export interface WalletAccount {
 export const PRODUCTS: Product[] = [
   {
     id: 'community-sponsor',
-    name: 'Community Sponsor',
+    name: 'Sponsor Pack 1',
     category: 'Community',
     description: 'Best for early-stage startups that want to support the program and be featured on the supporter wall.',
     minUSDC: 10000,
@@ -59,10 +60,11 @@ export const PRODUCTS: Product[] = [
     badge: 'Starter',
     badgeColor: 'bg-teal-500',
     gradient: 'from-teal-50 to-emerald-50',
+    image: '/pack1.png',
   },
   {
     id: 'silver-sponsor',
-    name: 'Silver Sponsor',
+    name: 'Sponsor Pack 2',
     category: 'Event',
     description: 'Includes a mini booth, logo placement on the event backdrop, and access to the official media kit.',
     minUSDC: 20000,
@@ -71,26 +73,29 @@ export const PRODUCTS: Product[] = [
     badge: 'Popular',
     badgeColor: 'bg-indigo-500',
     gradient: 'from-indigo-50 to-purple-50',
+    image: '/pack2.png',
   },
   {
     id: 'gold-sponsor',
-    name: 'Gold Sponsor',
+    name: 'Sponsor Pack 3',
     category: 'Event',
     description: 'A premium package for brands looking to connect with high-quality leads in the networking zone.',
     minUSDC: 30000,
     maxUSDC: 40000,
     tags: ['Booth premium', 'Lead retrieval', '3 event passes'],
     gradient: 'from-amber-50 to-orange-50',
+    image: '/pack3.png',
   },
   {
     id: 'innovation-sponsor',
-    name: 'Innovation Sponsor',
+    name: 'Sponsor Pack 4',
     category: 'Technology',
     description: 'Designed for blockchain and AI brands sponsoring the innovation showcase and live demo area.',
     minUSDC: 40000,
     maxUSDC: 50000,
     tags: ['Demo zone branding', 'Speaking slot', 'Press mention'],
     gradient: 'from-red-50 to-rose-50',
+    image: '/pack4.png',
   },
   {
     id: 'title-sponsor',
@@ -103,6 +108,7 @@ export const PRODUCTS: Product[] = [
     badge: 'Elite',
     badgeColor: 'bg-green-500',
     gradient: 'from-green-50 to-lime-50',
+    image: '/pack5.png',
   },
   {
     id: 'media-sponsor',
@@ -113,6 +119,7 @@ export const PRODUCTS: Product[] = [
     maxUSDC: 70000,
     tags: ['Media co-branding', 'Interview slot', 'Content rights'],
     gradient: 'from-blue-50 to-cyan-50',
+   image: '/pack6.png',
   },
 ];
 

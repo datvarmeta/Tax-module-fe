@@ -81,6 +81,11 @@ export function useSimulation() {
     setError(null);
     if (cart.length === 0) return;
 
+    if (type === 'business' && !!business.taxCode.trim() && !business.companyAddress.trim()) {
+      setError('Company Address is required when Tax Code is provided.');
+      return;
+    }
+
     const invalid = cart.find(item => item.selectedUSDC < item.product.minUSDC || item.selectedUSDC > item.product.maxUSDC);
     if (invalid) {
       setError(`Amount for ${invalid.product.name} must be between ${invalid.product.minUSDC.toLocaleString('en-US')} and ${invalid.product.maxUSDC.toLocaleString('en-US')} USDC.`);
@@ -140,7 +145,7 @@ export function useSimulation() {
           tax_amount: itemTax,
           item_total_amount_without_tax: netAmount,
           item_total_amount_with_tax: netAmount + itemTax,
-          unit_name: 'License',
+          unit_name: 'Package',
         };
       });
 
