@@ -15,20 +15,19 @@ function App() {
     : sim.personalFormRef.current.fullName;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen app-shell">
       <Header
         currentStep={sim.currentStep}
         cartItemCount={sim.cartItemCount}
       />
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="relative z-10 max-w-6xl mx-auto px-6 py-8">
         <AnimatePresence mode="wait">
           {sim.currentStep === 'select' && (
             <SelectStep
               key="select"
               cart={sim.cart}
-              onAddToCart={sim.addToCart}
-              onUpdateQuantity={sim.updateCartQuantity}
+              onUpsertCartItem={sim.upsertCartItem}
               onRemoveFromCart={sim.removeFromCart}
               onProceedToCheckout={sim.handleProceedToCheckout}
               cartSubtotal={sim.cartSubtotal}
@@ -43,7 +42,6 @@ function App() {
               cartSubtotal={sim.cartSubtotal}
               cartTaxAmount={sim.cartTaxAmount}
               cartTotalWithTax={sim.cartTotalWithTax}
-              onUpdateQuantity={sim.updateCartQuantity}
               onRemoveFromCart={sim.removeFromCart}
               initialPersonal={sim.personalFormRef.current}
               initialBusiness={sim.businessFormRef.current}

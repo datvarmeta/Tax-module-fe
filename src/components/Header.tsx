@@ -1,4 +1,4 @@
-import { Check, ShoppingCart, User } from 'lucide-react';
+import { Check, ShoppingCart, User, Sparkles } from 'lucide-react';
 import type { Step } from '../types';
 
 const NAV_STEPS = [
@@ -23,11 +23,11 @@ export function Header({ currentStep, cartItemCount }: Props) {
   const current = stepOrder(currentStep);
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-      <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
+    <header className="sticky top-0 z-40 border-b border-white/60 bg-white/65 backdrop-blur-xl">
+      <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-teal-500 rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 rounded-2xl flex items-center justify-center shadow-md shadow-cyan-300/40">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="6" width="20" height="12" rx="2" />
               <path d="M12 12h.01" />
@@ -35,18 +35,21 @@ export function Header({ currentStep, cartItemCount }: Props) {
               <path d="M7 12h.01" />
             </svg>
           </div>
-          <span className="font-bold text-gray-900 text-lg">BasalPay</span>
+          <div>
+            <span className="font-bold text-gray-900 text-lg tracking-tight">BasalPay</span>
+            <p className="text-[11px] text-gray-500 -mt-0.5">Sponsor Checkout Suite</p>
+          </div>
         </div>
 
         {/* Step Indicator */}
-        <nav className="flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 border border-white shadow-sm">
           {NAV_STEPS.map((step, i) => {
             const done = i < current;
             const active = i === current;
 
             return (
-              <div key={step.key} className="flex items-center gap-1">
-                {i > 0 && <div className={`w-12 h-px ${done ? 'bg-teal-400' : 'bg-gray-300'}`} />}
+              <div key={step.key} className="flex items-center gap-2">
+                {i > 0 && <div className={`w-10 h-px ${done ? 'bg-teal-400' : 'bg-gray-300'}`} />}
                 <div className="flex items-center gap-1.5">
                   {done ? (
                     <>
@@ -54,7 +57,7 @@ export function Header({ currentStep, cartItemCount }: Props) {
                       <span className="text-xs text-teal-600 font-medium">{step.label}</span>
                     </>
                   ) : active ? (
-                    <span className="flex items-center gap-1.5 bg-teal-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+                    <span className="flex items-center gap-1.5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-sm">
                       {step.label}
                     </span>
                   ) : (
@@ -69,14 +72,18 @@ export function Header({ currentStep, cartItemCount }: Props) {
         {/* Right side */}
         <div className="flex items-center gap-3">
           <div className="relative">
-            <ShoppingCart size={20} className="text-gray-500" />
+            <ShoppingCart size={20} className="text-gray-600" />
             {cartItemCount > 0 && (
-              <span className="absolute -top-2 -right-2 w-5 h-5 bg-teal-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-2 -right-2 w-5 h-5 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">
                 {cartItemCount}
               </span>
             )}
           </div>
-          <div className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center">
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700">
+            <Sparkles size={13} />
+            <span className="text-[11px] font-semibold">Premium</span>
+          </div>
+          <div className="w-8 h-8 rounded-full border border-gray-200 bg-white/80 flex items-center justify-center">
             <User size={16} className="text-gray-400" />
           </div>
         </div>

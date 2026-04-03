@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { CheckCircle2, Loader2, FileText, Copy, ShoppingCart } from 'lucide-react';
 import type { CartItem, InvoiceGenStatus } from '../types';
-import { EXCHANGE_RATE } from '../types';
+import { EXCHANGE_RATE, USDC_VND_RATE } from '../types';
 import type { Invoice } from '../services/api';
 
 interface Props {
@@ -17,6 +17,7 @@ interface Props {
 
 export function SuccessStep({ cart, cartTotalWithTax, txHash, invoiceGenStatus, invoiceData, buyerName, onViewInvoice, onReset }: Props) {
   const totalVND = invoiceData ? invoiceData.total_amount_with_tax : cartTotalWithTax;
+  const totalUSDC = totalVND / USDC_VND_RATE;
   const totalHBAR = invoiceData
     ? invoiceData.token_total_amount.toFixed(4)
     : (cartTotalWithTax / EXCHANGE_RATE).toFixed(4);
@@ -24,7 +25,7 @@ export function SuccessStep({ cart, cartTotalWithTax, txHash, invoiceGenStatus, 
   const displayBuyer = invoiceData ? invoiceData.buyer_name : buyerName;
   const status = invoiceData?.status || 'completed';
 
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = cart.length;
   const serviceName = invoiceData?.items && invoiceData.items.length > 0
     ? (invoiceData.items.length === 1
       ? invoiceData.items[0].item_name
@@ -84,9 +85,10 @@ export function SuccessStep({ cart, cartTotalWithTax, txHash, invoiceGenStatus, 
           <DetailCell label="Items" value={`${itemCount} ${itemCount === 1 ? 'item' : 'items'} — ${serviceName}`} />
           <DetailCell label="Buyer" value={displayBuyer} />
           <DetailCell label="Amount Paid" value={`${totalHBAR} HBAR`} />
-          <DetailCell label="VND Settled" value={`${totalVND.toLocaleString('vi-VN')} đ`} />
-          <DetailCell label="Exchange Rate" value={`1 HBAR = ${exchangeRate.toLocaleString('vi-VN')} VND`} />
-          <DetailCell label="Time" value={invoiceData?.submitted_at ? new Date(invoiceData.submitted_at).toLocaleString('vi-VN') : timeStr} />
+          <DetailCell label="VND Settled" value={`${totalVND.toLocaleString('en-US')} VND`} />
+          <DetailCell label="USDC Equivalent" value={`${totalUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC`} />
+          <DetailCell label="Exchange Rate" value={`1 HBAR = ${exchangeRate.toLocaleString('en-US')} VND`} />
+          <DetailCell label="Time" value={invoiceData?.submitted_at ? new Date(invoiceData.submitted_at).toLocaleString('en-GB') : timeStr} />
           <DetailCell label="Network" value="Hedera Hashgraph" />
           <DetailCell
             label="Status"

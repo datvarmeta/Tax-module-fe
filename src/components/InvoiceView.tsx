@@ -2,17 +2,17 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { CheckCircle2, Download, ShoppingCart, FileText, Loader2 } from 'lucide-react';
 import type { CartItem, CustomerType, PersonalForm, BusinessForm } from '../types';
-import { TAX_RATE } from '../types';
+import { TAX_RATE, USDC_VND_RATE } from '../types';
 import type { Invoice } from '../services/api';
 import { downloadInvoicePDF } from '../services/api';
 
 const SELLER_INFO = {
-  legalName: 'Công ty Cổ phần Công nghệ Varmeta',
+  legalName: 'Varmeta Technology Joint Stock Company',
   taxCode: '0100109106-507',
-  address: 'Tầng 5, Tòa nhà Indochina Riverside, 74 Bạch Đằng, Phường Hải Châu 1, Quận Hải Châu, TP. Đà Nẵng',
+  address: '5th Floor, Indochina Riverside Tower, 74 Bach Dang Street, Hai Chau District, Da Nang City, Vietnam',
   phone: '0236 3800 999',
   email: 'invoice@varmeta.io',
-  bankName: 'Ngân hàng TMCP Ngoại Thương Việt Nam (Vietcombank)',
+  bankName: 'Joint Stock Commercial Bank for Foreign Trade of Vietnam (Vietcombank)',
   bankAccount: '0071004123456',
 };
 
@@ -42,11 +42,14 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
   const netAmount = hasApiData ? invoiceData.total_amount_without_tax : cartSubtotal;
   const taxAmount = hasApiData ? invoiceData.total_tax_amount : cartTaxAmount;
   const totalAmount = hasApiData ? invoiceData.total_amount_with_tax : cartTotalWithTax;
+  const netAmountUSDC = netAmount / USDC_VND_RATE;
+  const taxAmountUSDC = taxAmount / USDC_VND_RATE;
+  const totalAmountUSDC = totalAmount / USDC_VND_RATE;
   const vatRate = items.length > 0 ? items[0].tax_percentage : TAX_RATE;
 
   const now = new Date();
   const dateStr = invoiceData?.completed_at
-    ? new Date(invoiceData.completed_at).toLocaleDateString('vi-VN')
+    ? new Date(invoiceData.completed_at).toLocaleDateString('en-GB')
     : `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
 
   const externalId = invoiceData?.external_id || '';
@@ -159,8 +162,8 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
                     <td className="py-3 text-gray-900">{item.item_name}</td>
                     <td className="py-3 text-center text-gray-500">{item.unit_name || 'License'}</td>
                     <td className="py-3 text-center text-gray-500">{item.quantity}</td>
-                    <td className="py-3 text-right text-gray-500">{item.unit_price.toLocaleString('vi-VN')} đ</td>
-                    <td className="py-3 text-right font-semibold text-teal-600">{item.item_total_amount_with_tax.toLocaleString('vi-VN')} đ</td>
+                    <td className="py-3 text-right text-gray-500">{item.unit_price.toLocaleString('en-US')} VND</td>
+                    <td className="py-3 text-right font-semibold text-teal-600">{item.item_total_amount_with_tax.toLocaleString('en-US')} VND</td>
                   </tr>
                 ))
               ) : (
@@ -168,10 +171,16 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
                   <tr key={cartItem.product.id} className="border-b border-gray-100">
                     <td className="py-3 text-gray-900">{cartItem.product.name}</td>
                     <td className="py-3 text-center text-gray-500">License</td>
-                    <td className="py-3 text-center text-gray-500">{cartItem.quantity}</td>
-                    <td className="py-3 text-right text-gray-500">{cartItem.product.priceVND.toLocaleString('vi-VN')} đ</td>
+                    <td className="py-3 text-center text-gray-500">1</td>
+                    <td className="py-3 text-right text-gray-500">
+                      {(cartItem.selectedUSDC * USDC_VND_RATE).toLocaleString('en-US')} VND
+                      <span className="block text-[11px] text-gray-400">{cartItem.selectedUSDC.toLocaleString('en-US')} USDC</span>
+                    </td>
                     <td className="py-3 text-right font-semibold text-teal-600">
-                      {(cartItem.product.priceVND * cartItem.quantity).toLocaleString('vi-VN')} đ
+                      {(cartItem.selectedUSDC * USDC_VND_RATE).toLocaleString('en-US')} VND
+                      <span className="block text-[11px] text-teal-500">
+                        {cartItem.selectedUSDC.toLocaleString('en-US')} USDC
+                      </span>
                     </td>
                   </tr>
                 ))
@@ -185,15 +194,24 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
           <div className="w-64 space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Subtotal</span>
-              <span className="text-gray-900">{netAmount.toLocaleString('vi-VN')} đ</span>
+              <span className="text-gray-900 text-right">
+                {netAmount.toLocaleString('en-US')} VND
+                <span className="block text-[11px] text-gray-500">{netAmountUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC</span>
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">VAT ({vatRate}%)</span>
-              <span className="text-teal-600">{taxAmount.toLocaleString('vi-VN')} đ</span>
+              <span className="text-teal-600 text-right">
+                {taxAmount.toLocaleString('en-US')} VND
+                <span className="block text-[11px] text-teal-500">{taxAmountUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC</span>
+              </span>
             </div>
             <div className="flex justify-between border-t pt-2 font-bold text-base">
               <span className="text-gray-700">Total Amount</span>
-              <span className="text-gray-900">{totalAmount.toLocaleString('vi-VN')} đ</span>
+              <span className="text-gray-900 text-right">
+                {totalAmount.toLocaleString('en-US')} VND
+                <span className="block text-xs text-gray-500">{totalAmountUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC</span>
+              </span>
             </div>
           </div>
         </div>

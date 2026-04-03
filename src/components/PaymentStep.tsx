@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, CheckCircle2, Loader2, Shield, ChevronRight, X } from 'lucide-react';
 import type { CartItem, PaymentSubStep, WalletAccount } from '../types';
-import { EXCHANGE_RATE, NETWORK_FEE, WALLET_ACCOUNTS } from '../types';
+import { EXCHANGE_RATE, NETWORK_FEE, USDC_VND_RATE, WALLET_ACCOUNTS } from '../types';
 
 interface Props {
   cart: CartItem[];
@@ -26,7 +26,12 @@ export function PaymentStep({
 }: Props) {
   const totalWithFee = cartTotalWithTax + NETWORK_FEE;
   const totalHBAR = (totalWithFee / EXCHANGE_RATE).toFixed(4);
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartSubtotalVND = cart.reduce((sum, item) => sum + item.selectedUSDC * USDC_VND_RATE, 0);
+  const cartSubtotalUSDC = cart.reduce((sum, item) => sum + item.selectedUSDC, 0);
+  const cartTaxAmountVND = cartTotalWithTax - cartSubtotalVND;
+  const cartTotalWithTaxUSDC = cartSubtotalUSDC + cartTaxAmountVND / USDC_VND_RATE;
+  const totalWithFeeUSDC = cartTotalWithTaxUSDC + NETWORK_FEE / USDC_VND_RATE;
+  const itemCount = cart.length;
 
   return (
     <motion.div
@@ -35,14 +40,14 @@ export function PaymentStep({
       exit={{ opacity: 0, y: -20 }}
     >
       <div className="mb-6">
-        <p className="text-sm font-semibold text-teal-600 mb-1">STEP 3 OF 3</p>
-        <h1 className="text-2xl font-bold text-gray-900">Payment</h1>
+        <p className="inline-flex items-center text-[11px] tracking-wide uppercase font-bold text-cyan-700 bg-cyan-100/70 px-3 py-1 rounded-full mb-2">Step 3 of 3</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Payment</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left — Payment Summary */}
         <div className="space-y-5">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="glass-card rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-5 h-5 bg-teal-100 rounded flex items-center justify-center">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2.5"><rect x="2" y="6" width="20" height="12" rx="2"/></svg>
@@ -59,11 +64,16 @@ export function PaymentStep({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-gray-900 text-sm truncate">{item.product.name}</p>
-                    <p className="text-xs text-gray-500">{item.product.category} · Qty: {item.quantity}</p>
+                    <p className="text-xs text-gray-500">{item.product.category}</p>
                   </div>
-                  <span className="text-sm font-medium text-gray-900">
-                    {(item.product.priceVND * item.quantity).toLocaleString('vi-VN')} đ
-                  </span>
+                  <div className="text-right">
+                    <span className="text-sm font-medium text-gray-900 block">
+                      {(item.selectedUSDC * USDC_VND_RATE).toLocaleString('en-US')} VND
+                    </span>
+                    <span className="text-[11px] text-gray-500 block">
+                      {item.selectedUSDC.toLocaleString('en-US')} USDC
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -71,24 +81,34 @@ export function PaymentStep({
             <div className="border-t pt-3 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">{itemCount} {itemCount === 1 ? 'item' : 'items'} + VAT</span>
-                <span className="text-gray-900">{cartTotalWithTax.toLocaleString('vi-VN')} đ</span>
+                <div className="text-right">
+                  <span className="text-gray-900 block">{cartTotalWithTax.toLocaleString('en-US')} VND</span>
+                  <span className="text-[11px] text-gray-500 block">{cartTotalWithTaxUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC</span>
+                </div>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Network Fee</span>
-                <span className="text-gray-900">{NETWORK_FEE.toLocaleString('vi-VN')} đ</span>
+                <div className="text-right">
+                  <span className="text-gray-900 block">{NETWORK_FEE.toLocaleString('en-US')} VND</span>
+                  <span className="text-[11px] text-gray-500 block">{(NETWORK_FEE / USDC_VND_RATE).toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC</span>
+                </div>
               </div>
               <div className="border-t pt-2 flex justify-between font-bold text-gray-900">
                 <span>Total</span>
-                <span>{totalWithFee.toLocaleString('vi-VN')} đ</span>
+                <div className="text-right">
+                  <span className="block">{totalWithFee.toLocaleString('en-US')} VND</span>
+                  <span className="block text-xs text-gray-500">{totalWithFeeUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* You Pay (Crypto) */}
-          <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
-            <p className="text-xs font-semibold text-teal-600 mb-1">You Pay (Crypto)</p>
-            <p className="text-2xl font-bold text-gray-900 font-mono">{totalHBAR} <span className="text-base">HBAR</span></p>
-            <p className="text-xs text-gray-500 mt-1">Rate: 1 HBAR = {EXCHANGE_RATE.toLocaleString('vi-VN')} VND</p>
+          <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-cyan-200 rounded-2xl p-4">
+            <p className="text-xs font-semibold text-teal-600 mb-1">You Pay (USDC)</p>
+            <p className="text-2xl font-bold text-gray-900 font-mono">{totalWithFeeUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} <span className="text-base">USDC</span></p>
+            <p className="text-sm font-semibold text-gray-700">{totalWithFee.toLocaleString('en-US')} VND</p>
+            <p className="text-xs text-gray-500 mt-1">Rate: 1 USDC ~= {USDC_VND_RATE.toLocaleString('en-US')} VND</p>
           </div>
 
           {error && (
@@ -99,7 +119,7 @@ export function PaymentStep({
         </div>
 
         {/* Right — Wallet Flow */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="glass-card rounded-2xl p-6">
           <AnimatePresence mode="wait">
             {subStep === 'connect' && (
               <ConnectView onOpenAccounts={onOpenAccounts} />
@@ -109,6 +129,7 @@ export function PaymentStep({
                 wallet={connectedWallet}
                 totalHBAR={totalHBAR}
                 totalVND={totalWithFee}
+                totalUSDC={totalWithFeeUSDC}
                 onConfirm={onConfirm}
                 onDisconnect={onDisconnect}
                 onBack={onBackToCheckout}
@@ -124,7 +145,7 @@ export function PaymentStep({
       {subStep !== 'processing' && (
         <button
           onClick={onBackToCheckout}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mt-6 cursor-pointer"
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mt-6 cursor-pointer bg-white/70 border border-white px-3 py-1.5 rounded-full"
         >
           <ArrowLeft size={14} /> Back to Checkout
         </button>
@@ -162,7 +183,7 @@ function ConnectView({ onOpenAccounts }: { onOpenAccounts: () => void }) {
       {/* Hashpack */}
       <button
         onClick={onOpenAccounts}
-        className="w-full flex items-center gap-4 p-4 border-2 border-teal-300 bg-teal-50/30 rounded-xl hover:bg-teal-50 transition cursor-pointer mb-3 text-left"
+        className="w-full flex items-center gap-4 p-4 border-2 border-cyan-300 bg-cyan-50/50 rounded-2xl hover:bg-cyan-50 transition cursor-pointer mb-3 text-left"
       >
         <div className="w-12 h-12 bg-teal-500 rounded-xl flex items-center justify-center shrink-0">
           <span className="text-white font-bold text-lg">H</span>
@@ -193,8 +214,8 @@ function ConnectView({ onOpenAccounts }: { onOpenAccounts: () => void }) {
   );
 }
 
-function ConfirmView({ wallet, totalHBAR, totalVND, onConfirm, onDisconnect, onBack }: {
-  wallet: string; totalHBAR: string; totalVND: number;
+function ConfirmView({ wallet, totalHBAR, totalVND, totalUSDC, onConfirm, onDisconnect, onBack }: {
+  wallet: string; totalHBAR: string; totalVND: number; totalUSDC: number;
   onConfirm: () => void; onDisconnect: () => void; onBack: () => void;
 }) {
   return (
@@ -229,15 +250,16 @@ function ConfirmView({ wallet, totalHBAR, totalVND, onConfirm, onDisconnect, onB
         <div className="space-y-2 text-sm">
           <div className="flex justify-between"><span className="text-gray-500">Paying to</span><span className="font-medium text-gray-900">Basal Pay Gateway</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Amount (Crypto)</span><span className="font-medium text-gray-900">{totalHBAR} HBAR</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Amount (VND)</span><span className="font-medium text-gray-900">{totalVND.toLocaleString('vi-VN')} đ</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Exchange Rate</span><span className="font-medium text-gray-900">1 HBAR = 2,480 VND</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Amount (VND)</span><span className="font-medium text-gray-900">{totalVND.toLocaleString('en-US')} VND</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Amount (USDC)</span><span className="font-medium text-gray-900">{totalUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Exchange Rate</span><span className="font-medium text-gray-900">1 HBAR = {EXCHANGE_RATE.toLocaleString('en-US')} VND · 1 USDC ~= {USDC_VND_RATE.toLocaleString('en-US')} VND</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Network</span><span className="font-medium text-gray-900">Hedera Hashgraph</span></div>
         </div>
       </div>
 
       <button
         onClick={onConfirm}
-        className="w-full bg-teal-500 text-white py-3.5 rounded-xl font-semibold hover:bg-teal-600 transition flex items-center justify-center gap-2 cursor-pointer text-sm mb-4"
+        className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 text-white py-3.5 rounded-xl font-semibold hover:brightness-105 transition flex items-center justify-center gap-2 cursor-pointer text-sm mb-4 shadow-lg shadow-cyan-200/70"
       >
         <CheckCircle2 size={18} />
         Confirm Payment — {totalHBAR} HBAR
@@ -318,7 +340,7 @@ function AccountsModal({ show, onClose, onSelect }: {
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6"
+        className="glass-card rounded-2xl shadow-xl w-full max-w-md p-6"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-2">

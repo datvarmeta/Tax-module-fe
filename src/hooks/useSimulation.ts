@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { Step, PaymentSubStep, InvoiceGenStatus, CustomerType, PersonalForm, BusinessForm, Product, CartItem } from '../types';
-import { EXCHANGE_RATE, TAX_RATE } from '../types';
+import { EXCHANGE_RATE, TAX_RATE, USDC_VND_RATE } from '../types';
 import * as api from '../services/api';
 import type { Invoice } from '../services/api';
 
@@ -32,39 +32,41 @@ export function useSimulation() {
   }, [cart, currentStep]);
 
   // --- Cart ---
-  const addToCart = useCallback((product: Product) => {
+  const upsertCartItem = useCallback((product: Product, selectedUSDC: number) => {
+    if (!Number.isFinite(selectedUSDC) || selectedUSDC < product.minUSDC || selectedUSDC > product.maxUSDC) {
+      setError(`Amount for ${product.name} must be between ${product.minUSDC.toLocaleString('en-US')} and ${product.maxUSDC.toLocaleString('en-US')} USDC.`);
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(item => item.product.id === product.id);
       if (existing) {
         return prev.map(item =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, selectedUSDC }
             : item
         );
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, selectedUSDC }];
     });
+    setError(null);
   }, []);
 
   const removeFromCart = useCallback((productId: string) => {
     setCart(prev => prev.filter(item => item.product.id !== productId));
   }, []);
 
-  const updateCartQuantity = useCallback((productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      setCart(prev => prev.filter(item => item.product.id !== productId));
-      return;
-    }
+  const updateCartItemAmount = useCallback((productId: string, selectedUSDC: number) => {
     setCart(prev => prev.map(item =>
-      item.product.id === productId ? { ...item, quantity } : item
+      item.product.id === productId ? { ...item, selectedUSDC } : item
     ));
   }, []);
 
   // --- Cart totals ---
-  const cartSubtotal = cart.reduce((sum, item) => sum + item.product.priceVND * item.quantity, 0);
+  const cartSubtotal = cart.reduce((sum, item) => sum + Math.round(item.selectedUSDC * USDC_VND_RATE), 0);
   const cartTaxAmount = Math.round(cartSubtotal * TAX_RATE / 100);
   const cartTotalWithTax = cartSubtotal + cartTaxAmount;
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartItemCount = cart.length;
 
   // --- Navigation ---
   const handleProceedToCheckout = useCallback(() => {
@@ -78,6 +80,13 @@ export function useSimulation() {
     setCustomerType(type);
     setError(null);
     if (cart.length === 0) return;
+
+    const invalid = cart.find(item => item.selectedUSDC < item.product.minUSDC || item.selectedUSDC > item.product.maxUSDC);
+    if (invalid) {
+      setError(`Amount for ${invalid.product.name} must be between ${invalid.product.minUSDC.toLocaleString('en-US')} and ${invalid.product.maxUSDC.toLocaleString('en-US')} USDC.`);
+      return;
+    }
+
     setPaymentSubStep('connect');
     setConnectedWallet(null);
     setCurrentStep('payment');
@@ -121,12 +130,12 @@ export function useSimulation() {
       const hbarTotal = cartTotalWithTax / EXCHANGE_RATE;
 
       const items = cart.map(cartItem => {
-        const netAmount = cartItem.product.priceVND * cartItem.quantity;
+        const netAmount = Math.round(cartItem.selectedUSDC * USDC_VND_RATE);
         const itemTax = Math.round(netAmount * TAX_RATE / 100);
         return {
           item_name: cartItem.product.name,
-          quantity: cartItem.quantity,
-          unit_price: cartItem.product.priceVND,
+          quantity: 1,
+          unit_price: netAmount,
           tax_percentage: TAX_RATE,
           tax_amount: itemTax,
           item_total_amount_without_tax: netAmount,
@@ -243,7 +252,7 @@ export function useSimulation() {
     cart, cartSubtotal, cartTaxAmount, cartTotalWithTax, cartItemCount,
     connectedWallet, showAccountsModal, processingSteps, invoiceId, invoiceData, txHash, error,
     personalFormRef, businessFormRef,
-    addToCart, removeFromCart, updateCartQuantity,
+    upsertCartItem, removeFromCart, updateCartItemAmount,
     handleProceedToCheckout, handleCheckout,
     handleOpenAccountsModal, handleCloseAccountsModal, handleSelectAccount,
     handleDisconnectWallet, handleConfirmPayment,

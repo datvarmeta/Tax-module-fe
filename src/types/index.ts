@@ -28,7 +28,8 @@ export interface Product {
   name: string;
   category: string;
   description: string;
-  priceVND: number;
+  minUSDC: number;
+  maxUSDC: number;
   tags: string[];
   badge?: string;
   badgeColor?: string;
@@ -37,7 +38,7 @@ export interface Product {
 
 export interface CartItem {
   product: Product;
-  quantity: number;
+  selectedUSDC: number;
 }
 
 export interface WalletAccount {
@@ -48,70 +49,77 @@ export interface WalletAccount {
 
 export const PRODUCTS: Product[] = [
   {
-    id: 'cloud-storage',
-    name: 'Cloud Storage Pro',
-    category: 'Storage',
-    description: '1TB secure cloud storage with AES-256 encryption, real-time sync, and unlimited version history.',
-    priceVND: 299000,
-    tags: ['1TB Storage', 'End-to-end encrypted', 'Multi-device sync'],
-    badge: 'Popular',
+    id: 'community-sponsor',
+    name: 'Community Sponsor',
+    category: 'Community',
+    description: 'Best for early-stage startups that want to support the program and be featured on the supporter wall.',
+    minUSDC: 10000,
+    maxUSDC: 20000,
+    tags: ['Supporter wall', '1 event pass', 'Social mention'],
+    badge: 'Starter',
     badgeColor: 'bg-teal-500',
     gradient: 'from-teal-50 to-emerald-50',
   },
   {
-    id: 'api-gateway',
-    name: 'API Gateway Enterprise',
-    category: 'Infrastructure',
-    description: 'High-performance API management platform with rate limiting, analytics dashboard, and global CDN.',
-    priceVND: 890000,
-    tags: ['10M requests/month', 'Global CDN', 'Real-time analytics'],
-    badge: 'Enterprise',
+    id: 'silver-sponsor',
+    name: 'Silver Sponsor',
+    category: 'Event',
+    description: 'Includes a mini booth, logo placement on the event backdrop, and access to the official media kit.',
+    minUSDC: 20000,
+    maxUSDC: 30000,
+    tags: ['Booth mini', 'Logo backdrop', 'Media kit access'],
+    badge: 'Popular',
     badgeColor: 'bg-indigo-500',
     gradient: 'from-indigo-50 to-purple-50',
   },
   {
-    id: 'data-analytics',
-    name: 'Data Analytics Suite',
-    category: 'Analytics',
-    description: 'Comprehensive business intelligence platform with AI-powered insights, custom dashboards, and reporting.',
-    priceVND: 590000,
-    tags: ['Unlimited dashboards', 'AI insights', 'CSV/PDF export'],
+    id: 'gold-sponsor',
+    name: 'Gold Sponsor',
+    category: 'Event',
+    description: 'A premium package for brands looking to connect with high-quality leads in the networking zone.',
+    minUSDC: 30000,
+    maxUSDC: 40000,
+    tags: ['Booth premium', 'Lead retrieval', '3 event passes'],
     gradient: 'from-amber-50 to-orange-50',
   },
   {
-    id: 'security-shield',
-    name: 'Security Shield Plus',
-    category: 'Security',
-    description: 'Enterprise-grade cybersecurity solution with real-time threat detection, DDoS protection, and compliance.',
-    priceVND: 750000,
-    tags: ['DDoS Protection', 'Threat intelligence', 'GDPR compliant'],
+    id: 'innovation-sponsor',
+    name: 'Innovation Sponsor',
+    category: 'Technology',
+    description: 'Designed for blockchain and AI brands sponsoring the innovation showcase and live demo area.',
+    minUSDC: 40000,
+    maxUSDC: 50000,
+    tags: ['Demo zone branding', 'Speaking slot', 'Press mention'],
     gradient: 'from-red-50 to-rose-50',
   },
   {
-    id: 'dev-workspace',
-    name: 'Developer Workspace',
-    category: 'Development',
-    description: 'All-in-one cloud development environment with CI/CD pipelines, container orchestration, and team tools.',
-    priceVND: 450000,
-    tags: ['CI/CD pipelines', 'Container support', 'Git integration'],
-    badge: 'New',
+    id: 'title-sponsor',
+    name: 'Title Sponsor',
+    category: 'Branding',
+    description: 'Top-tier package with event naming rights, priority logo placement, and branded content opportunities.',
+    minUSDC: 50000,
+    maxUSDC: 60000,
+    tags: ['Naming rights', 'Main stage branding', '6 VIP passes'],
+    badge: 'Elite',
     badgeColor: 'bg-green-500',
     gradient: 'from-green-50 to-lime-50',
   },
   {
-    id: 'comm-hub',
-    name: 'Communication Hub',
-    category: 'Communication',
-    description: 'Unified communications platform integrating email, SMS, push notifications, and webhook management at scale.',
-    priceVND: 320000,
-    tags: ['Email & SMS API', 'Push notifications', 'Webhooks'],
+    id: 'media-sponsor',
+    name: 'Media Partner Sponsor',
+    category: 'Media',
+    description: 'Built for media partners with press channels, podcast networks, or creator-led distribution.',
+    minUSDC: 60000,
+    maxUSDC: 70000,
+    tags: ['Media co-branding', 'Interview slot', 'Content rights'],
     gradient: 'from-blue-50 to-cyan-50',
   },
 ];
 
-export const CATEGORIES = ['All', 'Storage', 'Infrastructure', 'Analytics', 'Security', 'Development', 'Communication'];
+export const CATEGORIES = ['All', 'Community', 'Event', 'Technology', 'Branding', 'Media'];
 
 export const EXCHANGE_RATE = 2480;
+export const USDC_VND_RATE = 26000;
 export const NETWORK_FEE = 5000;
 export const TAX_RATE = 10;
 

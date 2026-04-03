@@ -1,22 +1,26 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, ShoppingCart, Plus, Minus, ArrowRight, Shield, Zap, FileText, Headphones } from 'lucide-react';
+import { Search, ShoppingCart, ArrowRight, Shield, Zap, FileText, Headphones } from 'lucide-react';
 import type { Product, CartItem } from '../types';
-import { PRODUCTS, CATEGORIES } from '../types';
+import { PRODUCTS, CATEGORIES, USDC_VND_RATE } from '../types';
 
 interface Props {
   cart: CartItem[];
-  onAddToCart: (product: Product) => void;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onUpsertCartItem: (product: Product, selectedUSDC: number) => void;
   onRemoveFromCart: (productId: string) => void;
   onProceedToCheckout: () => void;
   cartSubtotal: number;
   cartItemCount: number;
 }
 
-export function SelectStep({ cart, onAddToCart, onUpdateQuantity, onProceedToCheckout, cartSubtotal, cartItemCount }: Props) {
+export function SelectStep({ cart, onUpsertCartItem, onRemoveFromCart, onProceedToCheckout, cartSubtotal, cartItemCount }: Props) {
   const [category, setCategory] = useState('All');
   const [search, setSearch] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [draftAmounts, setDraftAmounts] = useState<Record<string, string>>({});
+  const [inputErrors, setInputErrors] = useState<Record<string, string>>({});
+
+  const cartSubtotalUSDC = cart.reduce((sum, item) => sum + item.selectedUSDC, 0);
 
   const filtered = PRODUCTS.filter(p => {
     if (category !== 'All' && p.category !== category) return false;
@@ -24,9 +28,29 @@ export function SelectStep({ cart, onAddToCart, onUpdateQuantity, onProceedToChe
     return true;
   });
 
-  const getCartQuantity = (productId: string) => {
-    const item = cart.find(i => i.product.id === productId);
-    return item?.quantity || 0;
+  const getCartItem = (productId: string) => cart.find(i => i.product.id === productId);
+
+  const openAmountInput = (product: Product) => {
+    const currentAmount = getCartItem(product.id)?.selectedUSDC ?? product.minUSDC;
+    setDraftAmounts(prev => ({ ...prev, [product.id]: String(currentAmount) }));
+    setExpandedId(product.id);
+  };
+
+  const applyAmount = (product: Product) => {
+    const raw = draftAmounts[product.id] ?? String(product.minUSDC);
+    const parsed = Number(raw);
+
+    if (!Number.isFinite(parsed) || parsed < product.minUSDC || parsed > product.maxUSDC) {
+      setInputErrors(prev => ({
+        ...prev,
+        [product.id]: `Please enter an amount between ${product.minUSDC.toLocaleString('en-US')} and ${product.maxUSDC.toLocaleString('en-US')} USDC.`,
+      }));
+      return;
+    }
+
+    setInputErrors(prev => ({ ...prev, [product.id]: '' }));
+    onUpsertCartItem(product, parsed);
+    setExpandedId(null);
   };
 
   return (
@@ -36,23 +60,21 @@ export function SelectStep({ cart, onAddToCart, onUpdateQuantity, onProceedToChe
       exit={{ opacity: 0, y: -20 }}
       className="pb-24"
     >
-      {/* Title */}
-      <div className="mb-6">
-        <p className="text-sm font-semibold text-teal-600 mb-1">STEP 1 OF 3</p>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Choose Services</h1>
-        <p className="text-sm text-gray-500">Add products to your cart, pay with HBAR via Basal Pay.</p>
+      <div className="mb-7">
+        <p className="inline-flex items-center text-[11px] tracking-wide uppercase font-bold text-cyan-700 bg-cyan-100/70 px-3 py-1 rounded-full mb-2">Step 1 of 3</p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">Choose Sponsor Packages</h1>
+        <p className="text-sm text-slate-600 max-w-2xl">Pick the sponsor package that matches your goals, view pricing in both VND and USDC, and enter your preferred contribution amount.</p>
       </div>
 
-      {/* Search + Categories */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
-        <div className="relative">
+      <div className="glass-card rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8">
+        <div className="relative flex-1 max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search services..."
-            className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none w-52"
+            placeholder="Search sponsor package..."
+            className="w-full pl-9 pr-4 py-2.5 border border-slate-200 bg-white/80 rounded-xl text-sm focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none"
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -60,10 +82,10 @@ export function SelectStep({ cart, onAddToCart, onUpdateQuantity, onProceedToChe
             <button
               key={cat}
               onClick={() => setCategory(cat)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
                 category === cat
-                  ? 'bg-teal-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow'
+                  : 'bg-white text-gray-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
               {cat}
@@ -72,24 +94,26 @@ export function SelectStep({ cart, onAddToCart, onUpdateQuantity, onProceedToChe
         </div>
       </div>
 
-      {/* Product Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
         {filtered.map((product, i) => {
-          const qty = getCartQuantity(product.id);
+          const cartItem = getCartItem(product.id);
+          const isSelected = !!cartItem;
+          const minVND = product.minUSDC * USDC_VND_RATE;
+          const maxVND = product.maxUSDC * USDC_VND_RATE;
+
           return (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className={`bg-white rounded-xl overflow-hidden transition-all group ${
-                qty > 0
-                  ? 'border-2 border-teal-400 shadow-md shadow-teal-50'
-                  : 'border border-gray-200 hover:shadow-lg'
+              className={`glass-card rounded-2xl overflow-hidden transition-all group ${
+                isSelected
+                  ? 'ring-2 ring-teal-400/80 shadow-xl shadow-cyan-100/60'
+                  : 'hover:shadow-xl hover:shadow-slate-200/80'
               }`}
             >
-              {/* Card header */}
-              <div className={`h-32 bg-gradient-to-br ${product.gradient} relative p-4`}>
+              <div className={`h-34 bg-gradient-to-br ${product.gradient} relative p-4`}>
                 {product.badge && (
                   <span className={`absolute top-3 left-3 ${product.badgeColor} text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full`}>
                     {product.badge}
@@ -98,15 +122,14 @@ export function SelectStep({ cart, onAddToCart, onUpdateQuantity, onProceedToChe
                 <span className="absolute top-3 right-3 text-[10px] font-medium text-gray-500 bg-white/70 px-2 py-0.5 rounded-full">
                   {product.category}
                 </span>
-                {qty > 0 && (
-                  <span className="absolute bottom-3 right-3 bg-teal-500 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center shadow-lg">
-                    {qty}
+                {isSelected && (
+                  <span className="absolute bottom-3 right-3 bg-teal-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg">
+                    {cartItem.selectedUSDC.toLocaleString('en-US')} USDC
                   </span>
                 )}
               </div>
 
-              {/* Card body */}
-              <div className="p-4">
+              <div className="p-4 sm:p-5">
                 <h3 className="font-semibold text-gray-900 mb-1">{product.name}</h3>
                 <p className="text-xs text-gray-500 mb-3 line-clamp-2">{product.description}</p>
 
@@ -118,44 +141,70 @@ export function SelectStep({ cart, onAddToCart, onUpdateQuantity, onProceedToChe
                   ))}
                 </div>
 
-                {/* Price + Cart controls */}
-                <div className="flex items-center justify-between">
-                  <span className="text-lg font-bold text-gray-900">
-                    {product.priceVND.toLocaleString('vi-VN')} đ
-                  </span>
-                  {qty === 0 ? (
+                <div className="mb-3 rounded-xl bg-slate-50/90 border border-slate-100 p-3">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {product.minUSDC.toLocaleString('en-US')} - {product.maxUSDC.toLocaleString('en-US')} USDC
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    ~ {minVND.toLocaleString('en-US')} VND - {maxVND.toLocaleString('en-US')} VND
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openAmountInput(product)}
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:brightness-105 transition cursor-pointer shadow-sm"
+                  >
+                    {isSelected ? 'Update Amount' : 'Choose Amount'}
+                  </button>
+                  {isSelected && (
                     <button
-                      onClick={() => onAddToCart(product)}
-                      className="flex items-center gap-1.5 bg-teal-500 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-teal-600 transition cursor-pointer"
+                      onClick={() => onRemoveFromCart(product.id)}
+                      className="px-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-gray-600 hover:bg-slate-50 transition cursor-pointer"
                     >
-                      <Plus size={14} /> Add
+                      Remove
                     </button>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => onUpdateQuantity(product.id, qty - 1)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-100 transition cursor-pointer"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <span className="w-8 text-center font-semibold text-sm">{qty}</span>
-                      <button
-                        onClick={() => onUpdateQuantity(product.id, qty + 1)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-teal-500 text-white hover:bg-teal-600 transition cursor-pointer"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
                   )}
                 </div>
+
+                {expandedId === product.id && (
+                  <div className="mt-3 p-3 rounded-xl border border-cyan-200 bg-cyan-50/60">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Input amount (USDC)</label>
+                    <input
+                      type="number"
+                      min={product.minUSDC}
+                      max={product.maxUSDC}
+                      step="1"
+                      value={draftAmounts[product.id] ?? ''}
+                      onChange={e => setDraftAmounts(prev => ({ ...prev, [product.id]: e.target.value }))}
+                      className="no-spinner w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none bg-white"
+                    />
+                    {inputErrors[product.id] && (
+                      <p className="text-[11px] text-red-600 mt-1">{inputErrors[product.id]}</p>
+                    )}
+                    <div className="flex gap-2 mt-3">
+                      <button
+                        onClick={() => applyAmount(product)}
+                        className="flex-1 bg-gradient-to-r from-teal-600 to-cyan-600 text-white text-xs font-semibold py-2 rounded-xl hover:brightness-105 transition cursor-pointer"
+                      >
+                        Save Amount
+                      </button>
+                      <button
+                        onClick={() => setExpandedId(null)}
+                        className="px-3 py-2 border border-slate-200 text-xs font-medium rounded-xl text-gray-600 hover:bg-slate-100 transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           );
         })}
       </div>
 
-      {/* Footer Features */}
-      <div className="border-t border-gray-200 pt-6 flex flex-wrap justify-center gap-8 text-xs text-gray-500">
+      <div className="mt-2 glass-card rounded-2xl border border-white/70 px-5 py-4 flex flex-wrap justify-center gap-7 text-xs text-gray-600">
         <div className="flex items-center gap-1.5">
           <Shield size={14} className="text-teal-500" />
           Secured by Hedera Network
@@ -174,14 +223,13 @@ export function SelectStep({ cart, onAddToCart, onUpdateQuantity, onProceedToChe
         </div>
       </div>
 
-      {/* Floating Cart Bar */}
       <AnimatePresence>
         {cartItemCount > 0 && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50"
+            className="fixed bottom-0 left-0 right-0 bg-white/88 backdrop-blur-xl border-t border-white shadow-[0_-12px_30px_rgba(15,23,42,0.1)] z-50"
           >
             <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -190,16 +238,16 @@ export function SelectStep({ cart, onAddToCart, onUpdateQuantity, onProceedToChe
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-900">
-                    {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'} in cart
+                    {cartItemCount} {cartItemCount === 1 ? 'package' : 'packages'} selected
                   </p>
                   <p className="text-xs text-gray-500">
-                    Subtotal: {cartSubtotal.toLocaleString('vi-VN')} đ
+                    Subtotal: {cartSubtotal.toLocaleString('en-US')} VND · {cartSubtotalUSDC.toLocaleString('en-US')} USDC
                   </p>
                 </div>
               </div>
               <button
                 onClick={onProceedToCheckout}
-                className="flex items-center gap-2 bg-teal-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-teal-600 transition cursor-pointer text-sm"
+                className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white px-6 py-3 rounded-xl font-semibold hover:brightness-105 transition cursor-pointer text-sm shadow-lg shadow-cyan-200/60"
               >
                 Proceed to Checkout <ArrowRight size={16} />
               </button>
