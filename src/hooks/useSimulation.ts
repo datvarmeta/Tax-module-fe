@@ -244,7 +244,11 @@ export function useSimulation() {
     setError(null);
   }, []);
 
-  const handleBackToCheckout = useCallback(() => setCurrentStep('checkout'), []);
+  const handleBackToCheckout = useCallback(() => {
+    setCurrentStep('checkout');
+    setPaymentSubStep('connect');
+    setConnectedWallet(null);
+  }, []);
   const handleBackToSelect = useCallback(() => setCurrentStep('select'), []);
 
   return {

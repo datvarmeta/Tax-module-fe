@@ -112,8 +112,14 @@ export function PaymentStep({
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-700 text-xs p-3 rounded-xl border border-red-200">
-              {error}
+            <div className="bg-red-50 text-red-700 text-xs p-3 rounded-xl border border-red-200 space-y-2">
+              <p>{error}</p>
+              <button
+                onClick={onBackToCheckout}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 hover:text-red-800 cursor-pointer"
+              >
+                <ArrowLeft size={12} /> Back to Checkout to edit details
+              </button>
             </div>
           )}
         </div>
@@ -142,7 +148,7 @@ export function PaymentStep({
         </div>
       </div>
 
-      {subStep !== 'processing' && (
+      {(subStep !== 'processing' || !!error) && (
         <button
           onClick={onBackToCheckout}
           className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mt-6 cursor-pointer bg-white/70 border border-white px-3 py-1.5 rounded-full"

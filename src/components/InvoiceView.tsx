@@ -7,13 +7,13 @@ import type { Invoice } from '../services/api';
 import { downloadInvoicePDF } from '../services/api';
 
 const SELLER_INFO = {
-  legalName: 'Varmeta Technology Joint Stock Company',
+  legalName: 'IRONMAN Vietnam',
   taxCode: '0100109106-507',
-  address: '5th Floor, Indochina Riverside Tower, 74 Bach Dang Street, Hai Chau District, Da Nang City, Vietnam',
-  phone: '0236 3800 999',
-  email: 'invoice@varmeta.io',
-  bankName: 'Joint Stock Commercial Bank for Foreign Trade of Vietnam (Vietcombank)',
-  bankAccount: '0071004123456',
+  address: 'Tầng 5, Tòa nhà Indochina Riverside, 74 Bạch Đằng, Phường Hải Châu 1, Quận Hải Châu, TP. Đà Nẵng',
+  phone: '0123 456 789',
+  email: 'ironmanvietnam@ironmanvietnam.io',
+  bankName: 'Ngân hàng TMCP Ngoại Thương Việt Nam (Vietcombank)',
+  bankAccount: '0987654321',
 };
 
 interface Props {
@@ -102,7 +102,7 @@ export function InvoiceView({ cart, cartSubtotal, cartTaxAmount, cartTotalWithTa
         <div className="flex items-start justify-between mb-6 pb-5 border-b border-gray-200">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center mt-0.5">
-              <span className="text-white font-bold text-xs">VM</span>
+              <span className="text-white font-bold text-xs">IM</span>
             </div>
             <div>
               <h3 className="font-bold text-gray-900">{SELLER_INFO.legalName}</h3>
