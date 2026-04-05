@@ -134,9 +134,12 @@ export function useSimulation() {
 
       const hbarTotal = cartTotalWithTax / EXCHANGE_RATE;
 
-      const items = cart.map(cartItem => {
+      const items = cart.map((cartItem, index) => {
         const netAmount = Math.round(cartItem.selectedUSDC * USDC_VND_RATE);
         const itemTax = Math.round(netAmount * TAX_RATE / 100);
+        const unitPriceHBAR = netAmount / EXCHANGE_RATE;
+        const taxHBAR = itemTax / EXCHANGE_RATE;
+        const lineTotalHBAR = unitPriceHBAR + taxHBAR;
         return {
           item_name: cartItem.product.name,
           quantity: 1,
@@ -145,6 +148,13 @@ export function useSimulation() {
           tax_amount: itemTax,
           item_total_amount_without_tax: netAmount,
           item_total_amount_with_tax: netAmount + itemTax,
+          token_unit_price: unitPriceHBAR,
+          token_tax_amount: taxHBAR,
+          token_line_total: lineTotalHBAR,
+          line_number: index + 1,
+          selection: 1,
+          item_code: cartItem.product.id.toUpperCase().replace(/[^A-Z0-9]/g, '_'),
+          unit_code: 'PKG',
           unit_name: 'Package',
         };
       });
@@ -166,7 +176,9 @@ export function useSimulation() {
         token_total_amount: hbarTotal,
         token_tax_amount: cartTaxAmount / EXCHANGE_RATE,
         token_net_amount: cartSubtotal / EXCHANGE_RATE,
+        payment_method: 'HBAR',
         notes: `Email: ${email}`,
+        issued_at: new Date().toISOString(),
         items,
       });
       createdInvoiceId = invoice.id;
