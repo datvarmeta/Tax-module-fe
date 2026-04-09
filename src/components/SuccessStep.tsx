@@ -67,11 +67,14 @@ export function SuccessStep({ cart, cartTotalWithTax, txHash, invoiceGenStatus, 
         {/* Tx Hash */}
         <div className="bg-gray-50 rounded-xl p-4 mb-4">
           <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Transaction Hash</p>
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-sm text-gray-900">{txHash}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-sm text-gray-900 truncate min-w-0">
+              {txHash.length > 20 ? `${txHash.slice(0, 10)}...${txHash.slice(-8)}` : txHash}
+            </span>
             <button
               onClick={() => navigator.clipboard.writeText(txHash)}
-              className="text-gray-400 hover:text-gray-600 cursor-pointer"
+              className="text-gray-400 hover:text-gray-600 cursor-pointer shrink-0"
+              title={txHash}
             >
               <Copy size={14} />
             </button>

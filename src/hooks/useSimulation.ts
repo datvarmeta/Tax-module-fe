@@ -6,11 +6,11 @@ import { TAX_RATE, USDC_VND_RATE } from '../types';
 import * as api from '../services/api';
 import type { Invoice } from '../services/api';
 
-function buildPaymentMessage(hbarAmount: string, vndAmount: number, itemCount: number): string {
+function buildPaymentMessage(usdcAmount: string, vndAmount: number, itemCount: number): string {
   return [
     'Basal Pay Payment Authorization',
     '--------------------------------',
-    `Amount: ${hbarAmount} HBAR (~${vndAmount.toLocaleString('en-US')} VND)`,
+    `Amount: ${usdcAmount} USDC (~${vndAmount.toLocaleString('en-US')} VND)`,
     'Recipient: Basal Pay Gateway',
     'Network: Hedera Mainnet',
     `Items: ${itemCount} sponsor package${itemCount === 1 ? '' : 's'}`,
