@@ -1,6 +1,6 @@
 export type Step = 'select' | 'checkout' | 'payment' | 'success' | 'invoice';
 
-export type PaymentSubStep = 'connect' | 'accounts' | 'confirm' | 'processing';
+export type PaymentSubStep = 'connect' | 'confirm' | 'signing' | 'processing';
 
 export type InvoiceGenStatus = 'idle' | 'generating' | 'completed';
 
@@ -125,12 +125,7 @@ export const PRODUCTS: Product[] = [
 
 export const CATEGORIES = ['All', 'Community', 'Event', 'Technology', 'Branding', 'Media'];
 
-export const EXCHANGE_RATE = 2480;
 export const USDC_VND_RATE = 26000;
 export const NETWORK_FEE = 5000;
 export const TAX_RATE = 10;
 
-export const WALLET_ACCOUNTS: WalletAccount[] = [
-  { id: '1', address: '0.0.123456789', network: 'Hedera Mainnet' },
-  { id: '2', address: '0.0.987654321', network: 'Hedera Mainnet' },
-];

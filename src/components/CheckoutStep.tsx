@@ -308,7 +308,7 @@ export function CheckoutStep({
               </div>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-gray-900">Crypto via Basal Pay</p>
-                <p className="text-xs text-gray-500">Hashpack Wallet · Hedera Network · HBAR</p>
+                <p className="text-xs text-gray-500">Hashpack Wallet · Hedera Network · USDC</p>
               </div>
               <CheckCircle2 size={20} className="text-teal-500" />
             </div>

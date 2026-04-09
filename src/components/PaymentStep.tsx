@@ -1,31 +1,29 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CheckCircle2, Loader2, Shield, ChevronRight, X } from 'lucide-react';
-import type { CartItem, PaymentSubStep, WalletAccount } from '../types';
-import { EXCHANGE_RATE, NETWORK_FEE, USDC_VND_RATE, WALLET_ACCOUNTS } from '../types';
+import { motion } from 'framer-motion';
+import { ArrowLeft, CheckCircle2, Loader2, Shield } from 'lucide-react';
+import type { CartItem, PaymentSubStep } from '../types';
+import { NETWORK_FEE, USDC_VND_RATE } from '../types';
 
 interface Props {
   cart: CartItem[];
   cartTotalWithTax: number;
   subStep: PaymentSubStep;
   connectedWallet: string | null;
-  showAccountsModal: boolean;
+  isConnecting: boolean;
   processingSteps: { text: string; done: boolean }[];
-  onOpenAccounts: () => void;
-  onCloseAccounts: () => void;
-  onSelectAccount: (address: string) => void;
+  onConnect: () => void;
   onDisconnect: () => void;
-  onConfirm: () => void;
+  onInitiatePayment: () => void;
+  onCancelSigning: () => void;
   onBackToCheckout: () => void;
   error: string | null;
 }
 
 export function PaymentStep({
-  cart, cartTotalWithTax, subStep, connectedWallet, showAccountsModal, processingSteps,
-  onOpenAccounts, onCloseAccounts, onSelectAccount, onDisconnect, onConfirm, onBackToCheckout,
+  cart, cartTotalWithTax, subStep, connectedWallet, isConnecting, processingSteps,
+  onConnect, onDisconnect, onInitiatePayment, onCancelSigning, onBackToCheckout,
   error,
 }: Props) {
   const totalWithFee = cartTotalWithTax + NETWORK_FEE;
-  const totalHBAR = (totalWithFee / EXCHANGE_RATE).toFixed(4);
   const cartSubtotalVND = cart.reduce((sum, item) => sum + item.selectedUSDC * USDC_VND_RATE, 0);
   const cartSubtotalUSDC = cart.reduce((sum, item) => sum + item.selectedUSDC, 0);
   const cartTaxAmountVND = cartTotalWithTax - cartSubtotalVND;
@@ -55,7 +53,6 @@ export function PaymentStep({
               <span className="text-sm font-semibold text-gray-700">Payment Summary</span>
             </div>
 
-            {/* Cart items compact list */}
             <div className="space-y-2 mb-4">
               {cart.map(item => (
                 <div key={item.product.id} className="flex items-center gap-3">
@@ -103,7 +100,7 @@ export function PaymentStep({
             </div>
           </div>
 
-          {/* You Pay (Crypto) */}
+          {/* You Pay */}
           <div className="bg-gradient-to-br from-teal-50 to-cyan-50 border border-cyan-200 rounded-2xl p-4">
             <p className="text-xs font-semibold text-teal-600 mb-1">You Pay (USDC)</p>
             <p className="text-2xl font-bold text-gray-900 font-mono">{totalWithFeeUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} <span className="text-base">USDC</span></p>
@@ -126,25 +123,30 @@ export function PaymentStep({
 
         {/* Right — Wallet Flow */}
         <div className="glass-card rounded-2xl p-6">
-          <AnimatePresence mode="wait">
-            {subStep === 'connect' && (
-              <ConnectView onOpenAccounts={onOpenAccounts} />
-            )}
-            {subStep === 'confirm' && connectedWallet && (
-              <ConfirmView
-                wallet={connectedWallet}
-                totalHBAR={totalHBAR}
-                totalVND={totalWithFee}
-                totalUSDC={totalWithFeeUSDC}
-                onConfirm={onConfirm}
-                onDisconnect={onDisconnect}
-                onBack={onBackToCheckout}
-              />
-            )}
-            {subStep === 'processing' && (
-              <ProcessingView steps={processingSteps} />
-            )}
-          </AnimatePresence>
+          {subStep === 'connect' && (
+            <ConnectView onConnect={onConnect} isConnecting={isConnecting} />
+          )}
+          {subStep === 'confirm' && connectedWallet && (
+            <ConfirmView
+              wallet={connectedWallet}
+              totalUSDC={totalWithFeeUSDC}
+              totalVND={totalWithFee}
+              onInitiatePayment={onInitiatePayment}
+              onDisconnect={onDisconnect}
+              onBack={onBackToCheckout}
+            />
+          )}
+          {subStep === 'signing' && connectedWallet && (
+            <SigningView
+              wallet={connectedWallet}
+              totalUSDC={totalWithFeeUSDC}
+              totalVND={totalWithFee}
+              onCancel={onCancelSigning}
+            />
+          )}
+          {subStep === 'processing' && (
+            <ProcessingView steps={processingSteps} />
+          )}
         </div>
       </div>
 
@@ -156,20 +158,13 @@ export function PaymentStep({
           <ArrowLeft size={14} /> Back to Checkout
         </button>
       )}
-
-      {/* Accounts Modal */}
-      <AccountsModal
-        show={showAccountsModal}
-        onClose={onCloseAccounts}
-        onSelect={onSelectAccount}
-      />
     </motion.div>
   );
 }
 
 /* --- Sub-views --- */
 
-function ConnectView({ onOpenAccounts }: { onOpenAccounts: () => void }) {
+function ConnectView({ onConnect, isConnecting }: { onConnect: () => void; isConnecting: boolean }) {
   return (
     <motion.div
       key="connect"
@@ -188,15 +183,20 @@ function ConnectView({ onOpenAccounts }: { onOpenAccounts: () => void }) {
 
       {/* Hashpack */}
       <button
-        onClick={onOpenAccounts}
-        className="w-full flex items-center gap-4 p-4 border-2 border-cyan-300 bg-cyan-50/50 rounded-2xl hover:bg-cyan-50 transition cursor-pointer mb-3 text-left"
+        onClick={onConnect}
+        disabled={isConnecting}
+        className="w-full flex items-center gap-4 p-4 border-2 border-cyan-300 bg-cyan-50/50 rounded-2xl hover:bg-cyan-50 transition cursor-pointer mb-3 text-left disabled:opacity-60 disabled:cursor-not-allowed"
       >
         <div className="w-12 h-12 bg-teal-500 rounded-xl flex items-center justify-center shrink-0">
-          <span className="text-white font-bold text-lg">H</span>
+          {isConnecting ? (
+            <Loader2 size={22} className="text-white animate-spin" />
+          ) : (
+            <span className="text-white font-bold text-lg">H</span>
+          )}
         </div>
         <div className="flex-1">
           <p className="font-semibold text-gray-900 text-sm">Hashpack Wallet</p>
-          <p className="text-xs text-gray-500">Hedera's native non-custodial wallet</p>
+          <p className="text-xs text-gray-500">{isConnecting ? 'Connecting...' : "Hedera's native non-custodial wallet"}</p>
         </div>
         <span className="text-xs font-semibold text-teal-600 border border-teal-300 rounded-full px-2.5 py-0.5">Recommended</span>
       </button>
@@ -220,10 +220,14 @@ function ConnectView({ onOpenAccounts }: { onOpenAccounts: () => void }) {
   );
 }
 
-function ConfirmView({ wallet, totalHBAR, totalVND, totalUSDC, onConfirm, onDisconnect, onBack }: {
-  wallet: string; totalHBAR: string; totalVND: number; totalUSDC: number;
-  onConfirm: () => void; onDisconnect: () => void; onBack: () => void;
+function ConfirmView({ wallet, totalUSDC, totalVND, onInitiatePayment, onDisconnect, onBack }: {
+  wallet: string; totalUSDC: number; totalVND: number;
+  onInitiatePayment: () => void; onDisconnect: () => void; onBack: () => void;
 }) {
+  const shortWallet = wallet.length > 20
+    ? `${wallet.slice(0, 10)}...${wallet.slice(-8)}`
+    : wallet;
+
   return (
     <motion.div
       key="confirm"
@@ -240,35 +244,31 @@ function ConfirmView({ wallet, totalHBAR, totalVND, totalUSDC, onConfirm, onDisc
       <h3 className="text-lg font-bold text-gray-900 mb-1">Wallet Connected</h3>
       <p className="text-sm text-gray-500 mb-5">Review and confirm your payment below.</p>
 
-      {/* Connected Wallet */}
       <div className="flex items-center gap-3 p-3 bg-teal-50 border border-teal-200 rounded-xl mb-5">
         <div className="flex-1 text-left">
           <p className="text-xs font-semibold text-teal-600">Connected Wallet</p>
-          <p className="font-mono font-bold text-gray-900 text-sm">{wallet}</p>
-          <p className="text-xs text-gray-500">Hedera Hashgraph · HBAR</p>
+          <p className="font-mono font-bold text-gray-900 text-sm">{shortWallet}</p>
+          <p className="text-xs text-gray-500">Hedera Hashgraph · USDC</p>
         </div>
         <CheckCircle2 size={22} className="text-teal-500" />
       </div>
 
-      {/* Transaction Details */}
       <div className="text-left mb-6">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Transaction Details</p>
         <div className="space-y-2 text-sm">
           <div className="flex justify-between"><span className="text-gray-500">Paying to</span><span className="font-medium text-gray-900">Basal Pay Gateway</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Amount (Crypto)</span><span className="font-medium text-gray-900">{totalHBAR} HBAR</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Amount (VND)</span><span className="font-medium text-gray-900">{totalVND.toLocaleString('en-US')} VND</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Amount (USDC)</span><span className="font-medium text-gray-900">{totalUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC</span></div>
-          <div className="flex justify-between"><span className="text-gray-500">Exchange Rate</span><span className="font-medium text-gray-900">1 HBAR = {EXCHANGE_RATE.toLocaleString('en-US')} VND · 1 USDC ~= {USDC_VND_RATE.toLocaleString('en-US')} VND</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Amount (VND)</span><span className="font-medium text-gray-900">{totalVND.toLocaleString('en-US')} VND</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Network</span><span className="font-medium text-gray-900">Hedera Hashgraph</span></div>
         </div>
       </div>
 
       <button
-        onClick={onConfirm}
+        onClick={onInitiatePayment}
         className="w-full bg-gradient-to-r from-teal-500 to-cyan-500 text-white py-3.5 rounded-xl font-semibold hover:brightness-105 transition flex items-center justify-center gap-2 cursor-pointer text-sm mb-4 shadow-lg shadow-cyan-200/70"
       >
         <CheckCircle2 size={18} />
-        Confirm Payment — {totalHBAR} HBAR
+        Confirm Payment — {totalUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC
       </button>
 
       <div className="flex items-center justify-center gap-3 text-xs text-gray-400">
@@ -276,6 +276,84 @@ function ConfirmView({ wallet, totalHBAR, totalVND, totalUSDC, onConfirm, onDisc
         <span>|</span>
         <button onClick={onBack} className="hover:text-gray-600 cursor-pointer">Back to Checkout</button>
       </div>
+    </motion.div>
+  );
+}
+
+function SigningView({ wallet, totalUSDC, totalVND, onCancel }: {
+  wallet: string; totalUSDC: number; totalVND: number; onCancel: () => void;
+}) {
+  const shortWallet = wallet.length > 20
+    ? `${wallet.slice(0, 10)}...${wallet.slice(-8)}`
+    : wallet;
+
+  return (
+    <motion.div
+      key="signing"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="text-center py-4"
+    >
+      {/* Animated HashPack logo with pulse ring */}
+      <div className="relative w-20 h-20 mx-auto mb-6">
+        <motion.div
+          animate={{ scale: [1, 1.25, 1], opacity: [0.4, 0, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute inset-0 rounded-2xl bg-teal-300"
+        />
+        <motion.div
+          animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+          className="absolute inset-0 rounded-2xl bg-teal-400"
+        />
+        <div className="relative w-20 h-20 bg-teal-500 rounded-2xl flex items-center justify-center">
+          <span className="text-white font-bold text-3xl">H</span>
+        </div>
+      </div>
+
+      <h3 className="text-lg font-bold text-gray-900 mb-2">Confirm in HashPack</h3>
+      <p className="text-sm text-gray-500 mb-6">
+        A signature request has been sent to your HashPack wallet.
+        <br />
+        Open HashPack and approve to continue.
+      </p>
+
+      {/* Transaction summary card */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-left mb-6 text-sm space-y-2">
+        <div className="flex justify-between">
+          <span className="text-gray-500">From</span>
+          <span className="font-mono font-medium text-gray-800 text-xs">{shortWallet}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">To</span>
+          <span className="font-medium text-gray-800">Basal Pay Gateway</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">Amount</span>
+          <span className="font-bold text-gray-900">{totalUSDC.toLocaleString('en-US', { maximumFractionDigits: 2 })} USDC</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">Equivalent</span>
+          <span className="font-medium text-gray-800">{totalVND.toLocaleString('en-US')} VND</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-gray-500">Network</span>
+          <span className="font-medium text-gray-800">Hedera Mainnet</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-center gap-2 text-xs text-teal-600 mb-6">
+        <Loader2 size={14} className="animate-spin" />
+        <span>Waiting for signature approval...</span>
+      </div>
+
+      <button
+        onClick={onCancel}
+        className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer underline underline-offset-2"
+      >
+        Cancel and go back
+      </button>
     </motion.div>
   );
 }
@@ -326,58 +404,6 @@ function ProcessingView({ steps }: { steps: { text: string; done: boolean }[] })
       <p className="text-xs text-gray-400 mt-6 flex items-center justify-center gap-1">
         <Shield size={12} /> Secured by Hedera Blockchain
       </p>
-    </motion.div>
-  );
-}
-
-function AccountsModal({ show, onClose, onSelect }: {
-  show: boolean; onClose: () => void; onSelect: (addr: string) => void;
-}) {
-  if (!show) return null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="glass-card rounded-2xl shadow-xl w-full max-w-md p-6"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-bold text-gray-900">Connect Hashpack</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-lg cursor-pointer"><X size={18} className="text-gray-500" /></button>
-        </div>
-        <p className="text-sm text-gray-500 mb-5">Select your wallet account to connect</p>
-
-        <div className="space-y-3">
-          {WALLET_ACCOUNTS.map((acc: WalletAccount) => (
-            <button
-              key={acc.id}
-              onClick={() => onSelect(acc.address)}
-              className="w-full flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-teal-300 hover:bg-teal-50/30 transition cursor-pointer text-left"
-            >
-              <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center shrink-0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/></svg>
-              </div>
-              <div className="flex-1">
-                <p className="font-mono font-bold text-gray-900 text-sm">{acc.address}</p>
-                <p className="text-xs text-gray-500">{acc.network}</p>
-              </div>
-              <ChevronRight size={16} className="text-gray-400" />
-            </button>
-          ))}
-        </div>
-
-        <p className="text-xs text-gray-400 text-center mt-5 flex items-center justify-center gap-1">
-          <Shield size={12} /> Read-only access · No custody of funds
-        </p>
-      </motion.div>
     </motion.div>
   );
 }

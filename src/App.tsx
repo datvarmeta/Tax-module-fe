@@ -59,13 +59,12 @@ function App() {
               cartTotalWithTax={sim.cartTotalWithTax}
               subStep={sim.paymentSubStep}
               connectedWallet={sim.connectedWallet}
-              showAccountsModal={sim.showAccountsModal}
+              isConnecting={sim.isConnecting}
               processingSteps={sim.processingSteps}
-              onOpenAccounts={sim.handleOpenAccountsModal}
-              onCloseAccounts={sim.handleCloseAccountsModal}
-              onSelectAccount={sim.handleSelectAccount}
+              onConnect={sim.handleConnect}
               onDisconnect={sim.handleDisconnectWallet}
-              onConfirm={sim.handleConfirmPayment}
+              onInitiatePayment={sim.handleInitiatePayment}
+              onCancelSigning={sim.handleCancelSigning}
               onBackToCheckout={sim.handleBackToCheckout}
               error={sim.error}
             />

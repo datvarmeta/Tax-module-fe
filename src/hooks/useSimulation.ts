@@ -1,8 +1,25 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useSignMessage } from 'wagmi';
+import { useAppKitAccount, useAppKit, useDisconnect } from '@reown/appkit/react';
 import type { Step, PaymentSubStep, InvoiceGenStatus, CustomerType, PersonalForm, BusinessForm, Product, CartItem } from '../types';
-import { EXCHANGE_RATE, TAX_RATE, USDC_VND_RATE } from '../types';
+import { TAX_RATE, USDC_VND_RATE } from '../types';
 import * as api from '../services/api';
 import type { Invoice } from '../services/api';
+
+function buildPaymentMessage(hbarAmount: string, vndAmount: number, itemCount: number): string {
+  return [
+    'Basal Pay Payment Authorization',
+    '--------------------------------',
+    `Amount: ${hbarAmount} HBAR (~${vndAmount.toLocaleString('en-US')} VND)`,
+    'Recipient: Basal Pay Gateway',
+    'Network: Hedera Mainnet',
+    `Items: ${itemCount} sponsor package${itemCount === 1 ? '' : 's'}`,
+    `Timestamp: ${new Date().toISOString()}`,
+    '--------------------------------',
+    'By signing this message, you authorize Basal Pay',
+    'to process this payment and issue a VAT invoice.',
+  ].join('\n');
+}
 
 export function useSimulation() {
   const [currentStep, setCurrentStep] = useState<Step>('select');
@@ -10,8 +27,6 @@ export function useSimulation() {
   const [invoiceGenStatus, setInvoiceGenStatus] = useState<InvoiceGenStatus>('idle');
   const [customerType, setCustomerType] = useState<CustomerType>('personal');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [connectedWallet, setConnectedWallet] = useState<string | null>(null);
-  const [showAccountsModal, setShowAccountsModal] = useState(false);
   const [processingSteps, setProcessingSteps] = useState<{ text: string; done: boolean }[]>([]);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const [invoiceData, setInvoiceData] = useState<Invoice | null>(null);
@@ -23,6 +38,32 @@ export function useSimulation() {
     taxCode: '', companyName: '', companyEmail: '', representativeId: '',
     companyAddress: '', businessLicense: null, authorizationDoc: null,
   });
+
+  // --- Reown AppKit wallet state ---
+  const { address, isConnected, status } = useAppKitAccount();
+  const { open: openReownModal } = useAppKit();
+  const { disconnect: disconnectWallet } = useDisconnect();
+  const { mutateAsync: signMessageAsync } = useSignMessage();
+
+  const isConnecting = status === 'connecting';
+
+  const connectedWallet = isConnected && address ? address : null;
+
+  // Auto-advance to confirm when wallet connects on the payment step
+  useEffect(() => {
+    if (isConnected && address && currentStep === 'payment' && paymentSubStep === 'connect') {
+      setPaymentSubStep('confirm');
+    }
+  }, [isConnected, address, currentStep, paymentSubStep]);
+
+  // Reset to connect when wallet disconnects mid-flow
+  useEffect(() => {
+    if (!isConnected && currentStep === 'payment' &&
+      (paymentSubStep === 'confirm' || paymentSubStep === 'signing')) {
+      setPaymentSubStep('connect');
+      setError(null);
+    }
+  }, [isConnected, currentStep, paymentSubStep]);
 
   // Redirect to select if cart becomes empty during checkout/payment
   useEffect(() => {
@@ -92,33 +133,43 @@ export function useSimulation() {
       return;
     }
 
-    setPaymentSubStep('connect');
-    setConnectedWallet(null);
+    // If already connected, skip straight to confirm
+    setPaymentSubStep(isConnected ? 'confirm' : 'connect');
     setCurrentStep('payment');
-  }, [cart]);
+  }, [cart, isConnected]);
 
   // --- Wallet ---
-  const handleOpenAccountsModal = useCallback(() => setShowAccountsModal(true), []);
-  const handleCloseAccountsModal = useCallback(() => setShowAccountsModal(false), []);
-
-  const handleSelectAccount = useCallback((address: string) => {
-    setConnectedWallet(address);
-    setShowAccountsModal(false);
-    setPaymentSubStep('confirm');
-  }, []);
+  const handleConnect = useCallback(() => {
+    openReownModal();
+  }, [openReownModal]);
 
   const handleDisconnectWallet = useCallback(() => {
-    setConnectedWallet(null);
+    disconnectWallet();
     setPaymentSubStep('connect');
-  }, []);
-
-  // --- Payment ---
-  const handleConfirmPayment = useCallback(async () => {
-    setPaymentSubStep('processing');
     setError(null);
-    if (cart.length === 0) return;
+  }, [disconnectWallet]);
 
-    // Step 1: Create invoice
+  // --- Payment: initiate (sign) then process ---
+  const handleInitiatePayment = useCallback(async () => {
+    if (cart.length === 0) return;
+    setError(null);
+    setPaymentSubStep('signing');
+
+    // Phase 1: sign message in HashPack (fake tx confirmation UX)
+    const usdcAmount = (cartTotalWithTax / USDC_VND_RATE).toFixed(2);
+    const message = buildPaymentMessage(usdcAmount, cartTotalWithTax, cart.length);
+
+    let signature: string;
+    try {
+      signature = await signMessageAsync({ message });
+    } catch {
+      setError('Signature rejected or cancelled. Please try again.');
+      setPaymentSubStep('confirm');
+      return;
+    }
+
+    // Phase 2: Create invoice
+    setPaymentSubStep('processing');
     let createdInvoiceId = invoiceId;
     try {
       const personal = personalFormRef.current;
@@ -132,14 +183,14 @@ export function useSimulation() {
       const email = type === 'business' ? business.companyEmail : personal.email;
       const phone = type === 'personal' ? personal.phone : '';
 
-      const hbarTotal = cartTotalWithTax / EXCHANGE_RATE;
+      const usdcTotal = cartTotalWithTax / USDC_VND_RATE;
 
       const items = cart.map((cartItem, index) => {
         const netAmount = Math.round(cartItem.selectedUSDC * USDC_VND_RATE);
         const itemTax = Math.round(netAmount * TAX_RATE / 100);
-        const unitPriceHBAR = netAmount / EXCHANGE_RATE;
-        const taxHBAR = itemTax / EXCHANGE_RATE;
-        const lineTotalHBAR = unitPriceHBAR + taxHBAR;
+        const unitPriceUSDC = netAmount / USDC_VND_RATE;
+        const taxUSDC = itemTax / USDC_VND_RATE;
+        const lineTotalUSDC = unitPriceUSDC + taxUSDC;
         return {
           item_name: cartItem.product.name,
           quantity: 1,
@@ -148,9 +199,9 @@ export function useSimulation() {
           tax_amount: itemTax,
           item_total_amount_without_tax: netAmount,
           item_total_amount_with_tax: netAmount + itemTax,
-          token_unit_price: unitPriceHBAR,
-          token_tax_amount: taxHBAR,
-          token_line_total: lineTotalHBAR,
+          token_unit_price: unitPriceUSDC,
+          token_tax_amount: taxUSDC,
+          token_line_total: lineTotalUSDC,
           line_number: index + 1,
           selection: 1,
           item_code: cartItem.product.id.toUpperCase().replace(/[^A-Z0-9]/g, '_'),
@@ -170,13 +221,12 @@ export function useSimulation() {
         total_amount_with_tax: cartTotalWithTax,
         total_tax_amount: cartTaxAmount,
         total_amount_without_tax: cartSubtotal,
-        token_currency: 'HBAR',
-        exchange_rate: EXCHANGE_RATE,
-        hbar_amount: hbarTotal,
-        token_total_amount: hbarTotal,
-        token_tax_amount: cartTaxAmount / EXCHANGE_RATE,
-        token_net_amount: cartSubtotal / EXCHANGE_RATE,
-        payment_method: 'HBAR',
+        token_currency: 'USDC',
+        exchange_rate: USDC_VND_RATE,
+        token_total_amount: usdcTotal,
+        token_tax_amount: cartTaxAmount / USDC_VND_RATE,
+        token_net_amount: cartSubtotal / USDC_VND_RATE,
+        payment_method: 'USDC',
         notes: `Email: ${email}`,
         issued_at: new Date().toISOString(),
         items,
@@ -190,11 +240,11 @@ export function useSimulation() {
       return;
     }
 
-    // Step 2: Simulate blockchain processing
+    // Phase 3: Animate processing steps
     const steps = [
       'Broadcasting transaction to Hedera Network...',
       'Awaiting blockchain confirmation...',
-      'Basal Pay converting HBAR → VND...',
+      'Basal Pay converting USDC → VND...',
       'Transferring VND to merchant...',
     ];
     const processed = steps.map(t => ({ text: t, done: false }));
@@ -207,21 +257,19 @@ export function useSimulation() {
     }
     await new Promise(r => setTimeout(r, 500));
 
-    const chars = '0123456789abcdef';
-    const hash = '0x' + Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join('') + '...' +
-      Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    setTxHash(hash);
+    // Phase 4: Use real signature as txHash
+    setTxHash(signature);
 
-    // Step 3: Save tx hash + submit for Viettel publishing
+    // Phase 5: Save tx hash + submit for Viettel publishing
     if (createdInvoiceId) {
-      try { await api.updatePayment(createdInvoiceId, hash); } catch (err) { console.warn('Failed to save tx hash:', err); }
+      try { await api.updatePayment(createdInvoiceId, signature); } catch (err) { console.warn('Failed to save tx hash:', err); }
       try { await api.submitInvoice(createdInvoiceId); } catch (err) { console.warn('Submit failed:', err); }
     }
 
     setCurrentStep('success');
     setInvoiceGenStatus('generating');
 
-    // Step 4: Poll invoice status
+    // Phase 6: Poll invoice status
     if (createdInvoiceId) {
       let attempts = 0;
       const poll = async () => {
@@ -243,7 +291,12 @@ export function useSimulation() {
       };
       setTimeout(poll, 2000);
     }
-  }, [cart, customerType, invoiceId, cartSubtotal, cartTaxAmount, cartTotalWithTax]);
+  }, [cart, customerType, invoiceId, cartSubtotal, cartTaxAmount, cartTotalWithTax, signMessageAsync]);
+
+  const handleCancelSigning = useCallback(() => {
+    setPaymentSubStep('confirm');
+    setError(null);
+  }, []);
 
   const handleViewInvoice = useCallback(() => setCurrentStep('invoice'), []);
 
@@ -252,8 +305,6 @@ export function useSimulation() {
     setPaymentSubStep('connect');
     setInvoiceGenStatus('idle');
     setCart([]);
-    setConnectedWallet(null);
-    setShowAccountsModal(false);
     setProcessingSteps([]);
     setInvoiceId(null);
     setInvoiceData(null);
@@ -263,20 +314,20 @@ export function useSimulation() {
 
   const handleBackToCheckout = useCallback(() => {
     setCurrentStep('checkout');
-    setPaymentSubStep('connect');
-    setConnectedWallet(null);
-  }, []);
+    setPaymentSubStep(isConnected ? 'confirm' : 'connect');
+  }, [isConnected]);
+
   const handleBackToSelect = useCallback(() => setCurrentStep('select'), []);
 
   return {
     currentStep, paymentSubStep, invoiceGenStatus, customerType,
     cart, cartSubtotal, cartTaxAmount, cartTotalWithTax, cartItemCount,
-    connectedWallet, showAccountsModal, processingSteps, invoiceId, invoiceData, txHash, error,
+    connectedWallet, isConnecting, processingSteps, invoiceId, invoiceData, txHash, error,
     personalFormRef, businessFormRef,
     upsertCartItem, removeFromCart, updateCartItemAmount,
     handleProceedToCheckout, handleCheckout,
-    handleOpenAccountsModal, handleCloseAccountsModal, handleSelectAccount,
-    handleDisconnectWallet, handleConfirmPayment,
+    handleConnect, handleDisconnectWallet,
+    handleInitiatePayment, handleCancelSigning,
     handleViewInvoice, handleReset, handleBackToCheckout, handleBackToSelect,
     setCustomerType,
   };
