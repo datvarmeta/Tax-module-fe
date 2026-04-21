@@ -78,8 +78,14 @@ export interface CreateInvoiceItem {
   item_name: string;
   quantity: number;
   unit_price: number;
+  unit_price_with_tax?: number;
   tax_percentage: number;
   tax_amount?: number;
+  item_type?: number;
+  item_discount?: number;
+  item_total_amount_after_discount?: number;
+  discount?: number;
+  discount2?: number;
   item_total_amount_without_tax: number;
   item_total_amount_with_tax?: number;
   token_unit_price?: number;
@@ -90,6 +96,10 @@ export interface CreateInvoiceItem {
   item_code?: string;
   unit_code?: string;
   unit_name?: string;
+  item_note?: string;
+  batch_no?: string;
+  exp_date?: string;
+  special_info?: Array<{ name: string; value: string }>;
 }
 
 export interface CreateInvoiceBody {
@@ -99,6 +109,7 @@ export interface CreateInvoiceBody {
   buyer_address?: string;
   buyer_email?: string;
   buyer_phone?: string;
+  buyer_code?: string;
   currency: string;
   total_amount_with_tax: number;
   total_tax_amount: number;
@@ -112,6 +123,7 @@ export interface CreateInvoiceBody {
   token_net_amount?: number;
   payment_method?: string;
   transaction_hash?: string;
+  erp_order_id?: string;
   notes?: string;
   issued_at?: string;
   items: CreateInvoiceItem[];
@@ -132,6 +144,30 @@ interface ApiResponse<T> {
   meta?: { total: number; limit: number; offset: number };
 }
 
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export function isAuthError(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    if (error.status === 401 || error.status === 403) return true;
+    if (error.code && /auth|unauth|token|expired/i.test(error.code)) return true;
+    if (/auth|unauth|token|expired|permission denied/i.test(error.message)) return true;
+  }
+  if (error instanceof Error) {
+    return /auth|unauth|token|expired|permission denied/i.test(error.message);
+  }
+  return false;
+}
+
 // --- Request helper ---
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
@@ -146,11 +182,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   });
 
-  const json: ApiResponse<T> = await res.json();
+  let json: ApiResponse<T> | null = null;
+  try {
+    json = await res.json();
+  } catch {
+    json = null;
+  }
 
-  if (!json.success) {
-    console.error(`[API] ← ${method} ${url} ERROR`, json.error);
-    throw new Error(json.error?.message || `API error (${res.status})`);
+  if (!res.ok || !json?.success) {
+    const message = json?.error?.message || `API error (${res.status})`;
+    const code = json?.error?.code;
+    console.error(`[API] ← ${method} ${url} ERROR`, json?.error || { message, code });
+    throw new ApiError(message, res.status, code);
   }
 
   console.log(`[API] ← ${method} ${url} ${res.status}`, json.data);
@@ -229,8 +272,6 @@ export async function getInvoiceHistory(invoiceId: string): Promise<Array<{
 
 export async function reportToAuthority(body: {
   transaction_uuid: string;
-  start_date: string;
-  end_date: string;
 }): Promise<{ success_count: number; error_count: number }> {
   return request('/invoices/report-to-authority', {
     method: 'POST',
@@ -287,4 +328,24 @@ export async function checkReadiness(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export interface LoginBody {
+  provider: 'viettel' | 'misa';
+  username: string;
+  password: string;
+  app_id?: string;
+  tax_code?: string;
+}
+
+export interface LoginResponse {
+  provider: string;
+  expires_at: string;
+}
+
+export async function login(body: LoginBody): Promise<LoginResponse> {
+  return request<LoginResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
