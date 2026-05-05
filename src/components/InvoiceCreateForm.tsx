@@ -4,6 +4,7 @@ import type { CreateInvoiceBody, CreateInvoiceItem } from '../services/api';
 
 type FormState = {
   buyerName: string;
+  buyerLegalName: string;
   buyerAddress: string;
   buyerPhone: string;
   buyerEmail: string;
@@ -28,6 +29,7 @@ type ItemState = {
 type Props = {
   onSubmit: (body: CreateInvoiceBody) => Promise<void>;
   onCancel: () => void;
+  provider?: 'viettel' | 'misa';
 };
 
 function parseNum(s: string): number {
@@ -103,6 +105,7 @@ const emptyItem = (): ItemState => ({
 
 const initForm: FormState = {
   buyerName: '',
+  buyerLegalName: '',
   buyerAddress: '',
   buyerPhone: '',
   buyerEmail: '',
@@ -133,7 +136,8 @@ const TAX_OPTIONS = [
 const I = 'w-full app-input text-sm';
 const S = 'w-full app-select text-sm';
 
-export function InvoiceCreateForm({ onSubmit, onCancel }: Props) {
+export function InvoiceCreateForm({ onSubmit, onCancel, provider }: Props) {
+  const isMisa = provider === 'misa';
   const [form, setForm] = useState<FormState>(initForm);
   const [items, setItems] = useState<ItemState[]>([emptyItem()]);
   const [open, setOpen] = useState({ cust: true, inv: true, detail: true });
@@ -182,6 +186,14 @@ export function InvoiceCreateForm({ onSubmit, onCancel }: Props) {
       setError('Tên người mua là bắt buộc.');
       return;
     }
+    if (isMisa && !form.buyerLegalName.trim()) {
+      setError('Tên pháp lý (MISA) là bắt buộc khi dùng provider MISA.');
+      return;
+    }
+    if (isMisa && !form.buyerAddress.trim()) {
+      setError('Địa chỉ là bắt buộc khi dùng provider MISA.');
+      return;
+    }
     if (items.some(i => !i.itemName.trim() || parseNum(i.quantity) <= 0 || parseNum(i.unitPrice) <= 0)) {
       setError('Mỗi dòng hàng cần có tên hàng, số lượng và đơn giá > 0.');
       return;
@@ -214,6 +226,7 @@ export function InvoiceCreateForm({ onSubmit, onCancel }: Props) {
 
     const body: CreateInvoiceBody = {
       buyer_name: form.buyerName,
+      buyer_legal_name: form.buyerLegalName || undefined,
       buyer_address: form.buyerAddress || undefined,
       buyer_email: form.buyerEmail || undefined,
       buyer_phone: form.buyerPhone || undefined,
@@ -272,7 +285,21 @@ export function InvoiceCreateForm({ onSubmit, onCancel }: Props) {
               </div>
 
               <div className="flex items-center gap-1">
-                <span className={`${LBL} w-28`}>Địa chỉ</span>
+                <span className={`${LBL} w-28`}>
+                  Tên pháp lý{isMisa && <span className="text-red-500">*</span>}
+                </span>
+                <input
+                  className={I}
+                  placeholder={isMisa ? 'Bắt buộc với MISA' : 'Tùy chọn'}
+                  value={form.buyerLegalName}
+                  onChange={e => setF('buyerLegalName', e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center gap-1">
+                <span className={`${LBL} w-28`}>
+                  Địa chỉ{isMisa && <span className="text-red-500">*</span>}
+                </span>
                 <input className={I} value={form.buyerAddress} onChange={e => setF('buyerAddress', e.target.value)} />
               </div>
 

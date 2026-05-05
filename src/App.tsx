@@ -203,12 +203,13 @@ function App() {
       const to = new Date();
       to.setHours(23, 59, 59, 999);
 
-      const data = await listInvoices({
+      const raw = await listInvoices({
         limit: 200,
         offset: 0,
         from: from.toISOString(),
         to: to.toISOString(),
       });
+      const data = raw ?? [];
 
       setDashboardStats({
         total: data.length,
@@ -238,7 +239,7 @@ function App() {
         from,
         to,
       });
-      setInvoiceList(data);
+      setInvoiceList(data ?? []);
     } catch (error) {
       if (!handleAuthError(error)) {
         setListError(error instanceof Error ? error.message : 'Không tải được danh sách hóa đơn');
@@ -616,7 +617,9 @@ function App() {
               {dashboardLoading ? (
                 <p className="text-slate-500">Đang tải thống kê...</p>
               ) : dashboardError ? (
-                <p className="text-rose-600">{dashboardError}</p>
+                <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-700 text-sm">
+                  <span className="font-medium">Lỗi:</span> {dashboardError}
+                </div>
               ) : (
                 <div className="grid md:grid-cols-4 gap-3">
                   <div className="rounded-xl bg-white p-4 border border-slate-200"><p className="text-sm text-slate-500">Hôm nay</p><p className="text-2xl font-bold">{dashboardStats.total}</p></div>
@@ -640,6 +643,7 @@ function App() {
           <InvoiceCreateForm
             onSubmit={onCreateSubmit}
             onCancel={() => setScreen('dashboard')}
+            provider={session.provider}
           />
         )}
 
@@ -660,36 +664,50 @@ function App() {
               <button onClick={loadInvoices} className="btn btn-primary px-3 py-2 text-sm">Tìm</button>
             </div>
 
-            {listLoading ? <p className="text-slate-500">Đang tải...</p> : null}
-            {listError ? <p className="text-rose-600">{listError}</p> : null}
+            {listLoading && <p className="text-slate-500">Đang tải...</p>}
+            {listError && (
+              <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-rose-700 text-sm">
+                <span className="font-medium">Lỗi:</span> {listError}
+              </div>
+            )}
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm data-table">
-                <thead>
-                  <tr className="border-b border-slate-200 text-left">
-                    <th className="py-2">Mã HĐ</th>
-                    <th className="py-2">Khách hàng</th>
-                    <th className="py-2">Tổng tiền</th>
-                    <th className="py-2">Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredInvoices.map(inv => {
-                    const status = mapStatusLabel(inv.status);
-                    return (
-                      <tr key={inv.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => goDetail(inv.id)}>
-                        <td className="py-2 font-mono text-xs">{inv.external_id || inv.id.slice(0, 12)}</td>
-                        <td className="py-2">{inv.buyer_name}</td>
-                        <td className="py-2">{formatVnd(inv.total_amount_with_tax)}</td>
-                        <td className="py-2">
-                          <span className={`status-badge ${status.cls}`}>{status.text}</span>
+            {!listLoading && !listError && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm data-table">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left">
+                      <th className="py-2">Mã HĐ</th>
+                      <th className="py-2">Khách hàng</th>
+                      <th className="py-2">Tổng tiền</th>
+                      <th className="py-2">Trạng thái</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredInvoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-10 text-center text-slate-400">
+                          Không có hóa đơn nào trong khoảng thời gian này
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      filteredInvoices.map(inv => {
+                        const status = mapStatusLabel(inv.status);
+                        return (
+                          <tr key={inv.id} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => goDetail(inv.id)}>
+                            <td className="py-2 font-mono text-xs">{inv.external_id || inv.id.slice(0, 12)}</td>
+                            <td className="py-2">{inv.buyer_name}</td>
+                            <td className="py-2">{formatVnd(inv.total_amount_with_tax)}</td>
+                            <td className="py-2">
+                              <span className={`status-badge ${status.cls}`}>{status.text}</span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -736,9 +754,11 @@ function App() {
               <button onClick={onDownloadPdf} disabled={actionLoading !== ''} className="btn btn-primary px-3 py-2 text-sm">
                 {actionLoading === 'pdf' ? <Loader2 className="inline w-4 h-4 mr-1 animate-spin" /> : <FileText className="inline w-4 h-4 mr-1" />}Tải PDF
               </button>
-              <button onClick={onSendCqt} disabled={actionLoading !== ''} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: 'linear-gradient(160deg, #1d4ed8 0%, #2563eb 100%)' }}>
-                {actionLoading === 'cqt' ? <Loader2 className="inline w-4 h-4 mr-1 animate-spin" /> : <Send className="inline w-4 h-4 mr-1" />}Gửi CQT
-              </button>
+              {session.provider !== 'misa' && (
+                <button onClick={onSendCqt} disabled={actionLoading !== ''} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: 'linear-gradient(160deg, #1d4ed8 0%, #2563eb 100%)' }}>
+                  {actionLoading === 'cqt' ? <Loader2 className="inline w-4 h-4 mr-1 animate-spin" /> : <Send className="inline w-4 h-4 mr-1" />}Gửi CQT
+                </button>
+              )}
               {invoiceDetail?.status === 'failed' && (
                 <button onClick={onRetrySubmit} disabled={actionLoading !== ''} className="px-3 py-2 rounded-lg text-white text-sm" style={{ background: 'linear-gradient(160deg, #be123c 0%, #e11d48 100%)' }}>
                   {actionLoading === 'submit' ? <Loader2 className="inline w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="inline w-4 h-4 mr-1" />}Thử lại

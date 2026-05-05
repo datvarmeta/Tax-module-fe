@@ -7,6 +7,7 @@ export interface Invoice {
   external_id?: string;
   transaction_uuid?: string;
   status: 'draft' | 'submitted' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  provider?: string;
 
   // Buyer info
   buyer_name: string;
@@ -60,6 +61,8 @@ export interface InvoiceItem {
   tax_amount: number;
   item_total_amount_without_tax: number;
   item_total_amount_with_tax: number;
+  item_total_amount_after_discount?: number;
+  item_discount?: number;
 
   // Token amounts
   token_unit_price: number;
@@ -68,9 +71,19 @@ export interface InvoiceItem {
 
   line_number: number;
   selection?: number;
+  item_type?: number;
+  item_code?: string;
   unit_code?: string;
   unit_name?: string;
-  item_code?: string;
+  discount?: number;
+  discount2?: number;
+  item_note?: string;
+  is_increase_item?: boolean;
+  batch_no?: string;
+  exp_date?: string;
+  adjust_ratio?: string;
+  unit_price_with_tax?: number;
+  special_info?: Array<{ name: string; value: string }>;
   created_at: string;
 }
 
@@ -97,8 +110,10 @@ export interface CreateInvoiceItem {
   unit_code?: string;
   unit_name?: string;
   item_note?: string;
+  is_increase_item?: boolean;
   batch_no?: string;
   exp_date?: string;
+  adjust_ratio?: string;
   special_info?: Array<{ name: string; value: string }>;
 }
 
@@ -117,7 +132,6 @@ export interface CreateInvoiceBody {
   token_currency: string;
   exchange_rate?: number;
   exchange_rate_source?: string;
-  hbar_amount?: number;
   token_total_amount?: number;
   token_tax_amount?: number;
   token_net_amount?: number;
